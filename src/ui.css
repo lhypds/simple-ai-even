@@ -9,17 +9,21 @@
   --accent: #4ade80;
   --btn: #3a3d48; /* gray */
   --btn-text: #e6e7ea;
+  --placeholder: #5a5e6a;
+  --focus: #9a9a9a;
 }
 
 :root[data-theme="light"] {
-  --bg: #f7f8fa;
+  --bg: #ffffff;
   --panel: #ffffff;
-  --border: #d8dbe2;
+  --border: #cccccc;
   --text: #1a1c22;
   --muted: #6b7280;
-  --accent: #16a34a;
+  --accent: #1a1c22; /* monochrome — no color */
   --btn: #000000; /* black */
   --btn-text: #ffffff;
+  --placeholder: #9ca3af;
+  --focus: #1a1c22;
 }
 
 :root[data-theme="terminal"] {
@@ -31,6 +35,8 @@
   --accent: #39ff14;
   --btn: #39ff14; /* terminal green */
   --btn-text: #000000;
+  --placeholder: #007000;
+  --focus: #39ff14;
 }
 
 * {
@@ -158,12 +164,12 @@ body {
 
 .term-input__field:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--focus);
 }
 
 .term-input__field::placeholder,
 .field__input::placeholder {
-  color: #007000;
+  color: var(--placeholder);
 }
 
 /* ---- modals (login / settings) ---- */
@@ -219,7 +225,7 @@ body {
 
 .field__input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--focus);
 }
 
 select.field__input {
@@ -263,7 +269,7 @@ select.field__input {
 
 .modal__saved {
   font-size: 13px;
-  color: var(--accent);
+  color: var(--focus);
   margin-right: auto;
   align-self: center;
   opacity: 0;

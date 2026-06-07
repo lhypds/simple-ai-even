@@ -60,25 +60,18 @@ export interface WebUIOptions {
   onLanguageChange: (language: string) => void;
 }
 
-export async function createWebUI(
-  bridge: EvenAppBridge,
-  options: WebUIOptions,
-): Promise<WebUI> {
+export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions): Promise<WebUI> {
   const root = document.querySelector<HTMLDivElement>("#app");
   if (!root) throw new Error("#app element not found");
 
-  const langOptions = LANGUAGES.map(
-    (l) => `<option value="${l.value}">${l.label}</option>`,
-  ).join("");
-  const themeOptions = THEMES.map(
-    (t) => `<option value="${t.value}">${t.label}</option>`,
-  ).join("");
+  const langOptions = LANGUAGES.map((l) => `<option value="${l.value}">${l.label}</option>`).join("");
+  const themeOptions = THEMES.map((t) => `<option value="${t.value}">${t.label}</option>`).join("");
 
   root.innerHTML = `
     <div class="app">
       <header class="app__header">
         <div class="app__title">
-          simple ai
+          simple ai - chat
           <span class="app__status" data-status></span>
         </div>
         <div class="app__actions">
