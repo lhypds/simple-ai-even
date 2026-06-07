@@ -40,9 +40,10 @@ async function main() {
     onUnavailable: () => emit("\n[sc bridge unavailable — run `npm run dev`]\n"),
   });
 
-  // Echo a query as a prompt line, then send it to `sc`.
+  // Echo the input so it appears right after the `gpt-5.5>` prompt the CLI already
+  // printed (a piped stdin isn't echoed back), then send it to `sc`.
   function ask(text: string) {
-    emit(`\n> ${text}\n`);
+    emit(`${text}\n`);
     void sc.send(text);
   }
 

@@ -8,7 +8,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 //
 // The browser can't spawn a CLI, so this plugin keeps ONE long-lived interactive
 // `sc` process and exposes three endpoints:
-//   GET  /api/sc/stream  — Server-Sent Events; streams the CLI's cleaned stdout
+//   GET  /api/sc/stream  — Server-Sent Events; streams the CLI's stdout verbatim
+//                          (ANSI codes stripped), banner and prompt included
 //   POST /api/sc/login   — { username, password } → writes `:login <u> <p>`
 //   POST /api/sc/send    — { text }               → writes the line to the CLI
 //
@@ -43,13 +44,13 @@ function scBridge(): Plugin {
 
   const handleStdout = (raw: string) => {
     buf += stripAnsi(raw);
-    // Drop the CLI's startup banner if present.
-    buf = buf.replace(/:help for help\.\s*/g, "");
 
     const m = buf.match(PROMPT_AT_END);
     if (m && m.index !== undefined) {
-      const content = buf.slice(0, m.index);
-      if (content.trim()) broadcast("chunk", content);
+      // Stream everything as-is — including the banner and the `gpt-5.5>` prompt — so
+      // the terminal shows exactly what the real `sc` CLI prints. We still use the
+      // prompt marker to fire `ready` (idle) for status purposes.
+      broadcast("chunk", buf);
       broadcast("ready", "");
       buf = "";
       return;
