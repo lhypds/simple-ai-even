@@ -1,13 +1,16 @@
 // Web-side UI rendered into #app:
 //   - a header with a settings (gear) icon
-//   - a settings modal to set/save username + password
+//   - a settings modal to set/save username + password (also logs `sc` in)
 //   - a transcript panel that shows each finished transcription result
+//   - a chat panel that shows `sc` (simple-ai-chat CLI) output, fed by a text
+//     input box and by finished voice transcripts
 //
 // Glasses rendering is unchanged; this is the page the user sees in the app/browser.
 
 import "./ui.css";
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 import { loadSettings, saveSettings } from "./settings";
+import { connectSc, type ScClient } from "./sc";
 
 const GEAR_SVG = `
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -19,6 +22,8 @@ const GEAR_SVG = `
 export interface WebUI {
   setStatus(text: string): void;
   addTranscript(text: string): void;
+  /** Send text to `sc` and show it in the chat panel (used by voice + the input box). */
+  askSc(text: string): void;
 }
 
 export async function createWebUI(bridge: EvenAppBridge): Promise<WebUI> {
@@ -37,6 +42,16 @@ export async function createWebUI(bridge: EvenAppBridge): Promise<WebUI> {
       <main class="transcript" data-transcript>
         <p class="transcript__empty">Speak — finished transcripts will appear here.</p>
       </main>
+      <section class="chat">
+        <div class="chat__log" data-chat>
+          <p class="chat__empty">Ask the AI — type below, or just speak.</p>
+        </div>
+        <form class="chat__input" data-chat-form>
+          <input class="chat__field" data-chat-field type="text"
+                 placeholder="Ask sc…" autocomplete="off" />
+          <button class="btn btn--primary" type="submit">Send</button>
+        </form>
+      </section>
     </div>
 
     <div class="modal" data-modal>
@@ -61,11 +76,56 @@ export async function createWebUI(bridge: EvenAppBridge): Promise<WebUI> {
 
   const statusEl = root.querySelector<HTMLSpanElement>("[data-status]")!;
   const listEl = root.querySelector<HTMLElement>("[data-transcript]")!;
+  const chatEl = root.querySelector<HTMLElement>("[data-chat]")!;
+  const chatForm = root.querySelector<HTMLFormElement>("[data-chat-form]")!;
+  const chatField = root.querySelector<HTMLInputElement>("[data-chat-field]")!;
   const modal = document.querySelector<HTMLDivElement>("[data-modal]")!;
   const usernameInput = modal.querySelector<HTMLInputElement>("[data-username]")!;
   const passwordInput = modal.querySelector<HTMLInputElement>("[data-password]")!;
   const savedNote = modal.querySelector<HTMLSpanElement>("[data-saved]")!;
 
+  // --- chat panel helpers -------------------------------------------------
+  const addBubble = (role: "user" | "ai", text: string): HTMLElement => {
+    const empty = chatEl.querySelector(".chat__empty");
+    if (empty) empty.remove();
+    const bubble = document.createElement("div");
+    bubble.className = `bubble bubble--${role}`;
+    bubble.textContent = text;
+    chatEl.append(bubble);
+    chatEl.scrollTop = chatEl.scrollHeight;
+    return bubble;
+  };
+
+  // The CLI streams its reply in pieces; we append into one "live" AI bubble
+  // until it goes idle (the `ready` event), then start a fresh one next time.
+  let liveAi: HTMLElement | null = null;
+  const sc: ScClient = connectSc({
+    onChunk(text) {
+      if (!liveAi) liveAi = addBubble("ai", "");
+      liveAi.textContent += text;
+      chatEl.scrollTop = chatEl.scrollHeight;
+    },
+    onReady() {
+      liveAi = null;
+    },
+    onUnavailable() {
+      addBubble("ai", "⚠ sc bridge unavailable — run `npm run dev`.");
+    },
+  });
+
+  chatForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = chatField.value.trim();
+    if (text) askSc(text);
+    chatField.value = "";
+  });
+
+  function askSc(text: string) {
+    addBubble("user", text);
+    void sc.send(text);
+  }
+
+  // --- settings modal -----------------------------------------------------
   const openModal = async () => {
     const settings = await loadSettings(bridge);
     usernameInput.value = settings.username;
@@ -82,10 +142,11 @@ export async function createWebUI(bridge: EvenAppBridge): Promise<WebUI> {
   });
 
   modal.querySelector("[data-save]")!.addEventListener("click", async () => {
-    await saveSettings(bridge, {
-      username: usernameInput.value.trim(),
-      password: passwordInput.value,
-    });
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value;
+    await saveSettings(bridge, { username, password });
+    // Log `sc` in with the saved credentials so chat requests are authenticated.
+    if (username) void sc.login(username, password);
     savedNote.classList.add("modal__saved--show");
     setTimeout(closeModal, 600);
   });
@@ -110,5 +171,6 @@ export async function createWebUI(bridge: EvenAppBridge): Promise<WebUI> {
       listEl.append(line);
       listEl.scrollTop = listEl.scrollHeight;
     },
+    askSc,
   };
 }

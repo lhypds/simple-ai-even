@@ -43,6 +43,7 @@ async function main() {
         lastShownSeq = seq;
         transcript = transcript ? `${transcript} ${text}` : text;
         ui.addTranscript(text); // show the finished result on the page
+        ui.askSc(text); // and send it to the sc AI chat
       }
     } catch (err) {
       console.error("transcribe error:", err);
