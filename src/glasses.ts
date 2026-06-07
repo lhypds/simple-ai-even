@@ -53,7 +53,7 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
   return {
     async render({ status, text }) {
       // Send the whole buffer as the content; the device scrolls it natively.
-      const content = status ? `${text}\n${status}` : text;
+      const content = status ? (text ? `${text}\n${status}` : status) : text;
       await bridge.textContainerUpgrade(
         new TextContainerUpgrade({
           containerID: CONTAINER_ID,
