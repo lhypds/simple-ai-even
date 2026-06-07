@@ -9,9 +9,9 @@
   "permissions": [
     {
       "name": "network",
-      "desc": "This app needs to access the network in order to ...",
+      "desc": "This app needs network access to transcribe glasses microphone audio.",
       "whitelist": [
-        "https://example.com"
+        "https://api.openai.com"
       ]
     },
     {
