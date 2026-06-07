@@ -1,10 +1,36 @@
-:root {
+/* Dark is the default theme; the others override via [data-theme] on <html>. */
+:root,
+:root[data-theme="dark"] {
   --bg: #0f1014;
   --panel: #181a21;
   --border: #2a2d38;
   --text: #e6e7ea;
   --muted: #8b8f9a;
   --accent: #4ade80;
+  --btn: #3a3d48; /* gray */
+  --btn-text: #e6e7ea;
+}
+
+:root[data-theme="light"] {
+  --bg: #f7f8fa;
+  --panel: #ffffff;
+  --border: #d8dbe2;
+  --text: #1a1c22;
+  --muted: #6b7280;
+  --accent: #16a34a;
+  --btn: #000000; /* black */
+  --btn-text: #ffffff;
+}
+
+:root[data-theme="terminal"] {
+  --bg: #000000;
+  --panel: #0a140a;
+  --border: #1f3a1f;
+  --text: #00f700;
+  --muted: #2a8a3a;
+  --accent: #39ff14;
+  --btn: #39ff14; /* terminal green */
+  --btn-text: #000000;
 }
 
 * {
@@ -13,7 +39,11 @@
 
 body {
   margin: 0;
-  font: 16px/1.5 system-ui, "Segoe UI", Roboto, sans-serif;
+  font:
+    16px/1.5 system-ui,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
   background: var(--bg);
   color: var(--text);
 }
@@ -85,7 +115,13 @@ body {
   overflow-y: auto;
   white-space: pre-wrap;
   word-break: break-word;
-  font: 14px/1.5 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font:
+    14px/1.5 ui-monospace,
+    SFMono-Regular,
+    "SF Mono",
+    Menlo,
+    Consolas,
+    monospace;
   color: var(--text);
 }
 
@@ -99,7 +135,7 @@ body {
 }
 
 .term-input__prompt {
-  color: var(--accent);
+  color: var(--btn);
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   font-weight: 600;
 }
@@ -107,16 +143,27 @@ body {
 .term-input__field {
   flex: 1;
   padding: 10px 14px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--btn);
   border-radius: 10px;
   background: var(--panel);
   color: var(--text);
-  font: 14px/1.5 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font:
+    14px/1.5 ui-monospace,
+    SFMono-Regular,
+    "SF Mono",
+    Menlo,
+    Consolas,
+    monospace;
 }
 
 .term-input__field:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+.term-input__field::placeholder,
+.field__input::placeholder {
+  color: #007000;
 }
 
 /* ---- modals (login / settings) ---- */
@@ -163,7 +210,7 @@ body {
 .field__input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--btn);
   border-radius: 10px;
   background: var(--bg);
   color: var(--text);
@@ -175,11 +222,22 @@ body {
   border-color: var(--accent);
 }
 
+select.field__input {
+  height: 28px;
+  padding-block: 12px;
+}
+
 .modal__actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 8px;
+}
+
+.modal__actions .btn {
+  min-width: 96px;
+  height: 44px;
+  text-align: center;
 }
 
 .btn {
@@ -193,9 +251,9 @@ body {
 }
 
 .btn--primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #0a0a0a;
+  background: var(--btn);
+  border-color: var(--btn);
+  color: var(--btn-text);
   font-weight: 600;
 }
 

@@ -27,6 +27,17 @@ const LANGUAGES: Array<{ value: string; label: string }> = [
   { value: "zh", label: "中文" },
 ];
 
+// UI themes, applied via the `data-theme` attribute on <html> (see ui.css).
+const THEMES: Array<{ value: string; label: string }> = [
+  { value: "dark", label: "Dark" },
+  { value: "light", label: "Light" },
+  { value: "terminal", label: "Terminal" },
+];
+
+function applyTheme(theme: string): void {
+  document.documentElement.dataset.theme = theme || "terminal";
+}
+
 export interface WebUI {
   setStatus(text: string): void;
   /** Replace the terminal output with the given text (kept in sync with the glasses). */
@@ -51,6 +62,9 @@ export async function createWebUI(
 
   const langOptions = LANGUAGES.map(
     (l) => `<option value="${l.value}">${l.label}</option>`,
+  ).join("");
+  const themeOptions = THEMES.map(
+    (t) => `<option value="${t.value}">${t.label}</option>`,
   ).join("");
 
   root.innerHTML = `
@@ -99,6 +113,10 @@ export async function createWebUI(
           <span class="field__label">Speech language</span>
           <select class="field__input" data-language>${langOptions}</select>
         </label>
+        <label class="field">
+          <span class="field__label">Theme</span>
+          <select class="field__input" data-theme>${themeOptions}</select>
+        </label>
         <div class="modal__actions">
           <span class="modal__saved" data-saved>Saved ✓</span>
           <button class="btn" data-close-settings>Cancel</button>
@@ -119,11 +137,13 @@ export async function createWebUI(
 
   const settingsModal = document.querySelector<HTMLDivElement>("[data-settings-modal]")!;
   const languageSelect = settingsModal.querySelector<HTMLSelectElement>("[data-language]")!;
+  const themeSelect = settingsModal.querySelector<HTMLSelectElement>("[data-theme]")!;
   const savedNote = settingsModal.querySelector<HTMLSpanElement>("[data-saved]")!;
 
   // Hold the persisted settings so saving one modal doesn't clobber the other's fields.
   let settings = await loadSettings(bridge);
   options.onLanguageChange(settings.language);
+  applyTheme(settings.theme);
 
   // --- input line ---------------------------------------------------------
   inputForm.addEventListener("submit", (e) => {
@@ -159,10 +179,14 @@ export async function createWebUI(
   // --- settings modal (language only) -------------------------------------
   const openSettings = () => {
     languageSelect.value = settings.language;
+    themeSelect.value = settings.theme;
     savedNote.classList.remove("modal__saved--show");
     settingsModal.classList.add("modal--open");
   };
-  const closeSettings = () => settingsModal.classList.remove("modal--open");
+  const closeSettings = () => {
+    applyTheme(settings.theme); // discard any unsaved live preview
+    settingsModal.classList.remove("modal--open");
+  };
 
   root.querySelector("[data-open-settings]")!.addEventListener("click", openSettings);
   settingsModal.querySelector("[data-close-settings]")!.addEventListener("click", closeSettings);
@@ -170,11 +194,16 @@ export async function createWebUI(
     if (e.target === settingsModal) closeSettings();
   });
 
+  // Preview the theme immediately; revert to the saved one if the modal is cancelled.
+  themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
+
   settingsModal.querySelector("[data-save]")!.addEventListener("click", async () => {
     const language = languageSelect.value;
-    settings = { ...settings, language };
+    const theme = themeSelect.value;
+    settings = { ...settings, language, theme };
     await saveSettings(bridge, settings);
     options.onLanguageChange(language);
+    applyTheme(theme);
     savedNote.classList.add("modal__saved--show");
     setTimeout(closeSettings, 600);
   });
