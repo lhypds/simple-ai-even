@@ -22,7 +22,7 @@ async function main() {
   // keeps the full scrollback (`webLog`). Both are fed from the same output.
   let terminal = "";
   let webLog = "";
-  let statusText = "starting…";
+  let statusText = "";
   let sttLanguage = ""; // ISO-639-1 hint from Settings; "" = auto-detect.
   // The CLI prompt (e.g. "gpt-5.5> ") captured from the last reply, so we can keep
   // it on screen when we clear for a new conversation.
@@ -43,9 +43,7 @@ async function main() {
   // the streaming reply alone.
   function renderAll() {
     const preview = draft && !generating;
-    const webView = preview
-      ? webLog.replace(/(^|\n)[^\n]*?>[ \t]*$/, "$1") + `${lastPrompt}${draft}`
-      : webLog;
+    const webView = preview ? webLog.replace(/(^|\n)[^\n]*?>[ \t]*$/, "$1") + `${lastPrompt}${draft}` : webLog;
     const glassesView = preview ? `${lastPrompt}${draft}` : terminal;
     ui.render(webView);
     void display.render({ status: statusText, text: glassesView });
@@ -115,7 +113,7 @@ async function main() {
     const stripped = webLog.replace(/(^|\n)[^\n]*?>[ \t]*$/, "$1");
     webLog = (stripped + `${lastPrompt}${text}\n`).slice(-WEB_LOG_MAX);
     generating = true;
-    setStatus("● generating…"); // re-renders both views
+    setStatus("● generating"); // re-renders both views
     void stopListening();
     void sc.send(text);
   }
@@ -152,7 +150,7 @@ async function main() {
   });
 
   async function handleSegment(pcm: Uint8Array, seq: number) {
-    setStatus("● transcribing…");
+    setStatus("● transcribing");
     try {
       const text = await transcribe(pcm, SAMPLE_RATE, sttLanguage || undefined);
       if (text && seq > lastShownSeq) {
