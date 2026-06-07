@@ -35,17 +35,25 @@ async function main() {
 
   // The glasses follow the newest output by default; the display keeps its own scroll
   // position so the user can page back with the Up/Down buttons (see below).
+  // Tidy the text for the small glasses display: drop the CLI's ":help for help"
+  // hint, and the trailing idle prompt (e.g. "gpt-5.5> ") so a finished reply
+  // doesn't leave an empty next-model line.
+  const glassesText = () =>
+    terminal
+      .replace(/^.*:help.*\n?/gim, "")
+      .replace(/\n*[^\n]*?>[ \t]*$/, "");
+
   function emit(text: string) {
     terminal = (terminal + text).slice(-TERMINAL_MAX);
     webLog = (webLog + text).slice(-WEB_LOG_MAX);
     ui.render(webLog);
-    void display.render({ status: statusText, text: terminal });
+    void display.render({ status: statusText, text: glassesText() });
   }
 
   function setStatus(text: string) {
     statusText = text;
     ui.setStatus(text);
-    void display.render({ status: statusText, text: terminal });
+    void display.render({ status: statusText, text: glassesText() });
   }
 
   async function startListening() {
