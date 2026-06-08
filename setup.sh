@@ -7,14 +7,14 @@ echo "==> Installing npm dependencies"
 npm install
 
 # Vite 8 bundles with Rolldown. Its packages (@rolldown/pluginutils and the
-# platform-native binding) get silently skipped when a package-lock.json built
-# on another OS is reused here — a known npm bug with optional/platform deps.
-# That leaves Vite unable to start (ERR_MODULE_NOT_FOUND for @rolldown/*).
-# Detect the incomplete install and recover with a clean reinstall.
+# platform-native binding) can be left out by an incomplete/interrupted install
+# or a known npm optional-deps bug, leaving Vite unable to start
+# (ERR_MODULE_NOT_FOUND for @rolldown/*). Recover with a clean install from the
+# lockfile. `npm ci` wipes node_modules and installs exactly what the lockfile
+# pins — and never rewrites package-lock.json, so the committed file stays clean.
 if [ ! -f node_modules/@rolldown/pluginutils/dist/index.mjs ]; then
-  echo "==> Rolldown install looks incomplete — clean reinstalling"
-  rm -rf node_modules package-lock.json
-  npm install
+  echo "==> Rolldown install looks incomplete — reinstalling with npm ci"
+  npm ci
 fi
 
 echo "==> Checking .env"
