@@ -13,11 +13,11 @@ export interface Settings {
   password: string;
   /** ISO-639-1 speech-to-text hint; "" means auto-detect. */
   language: string;
-  /** UI theme: "terminal" | "light" | "terminal". */
+  /** UI theme: "light" | "dark" | "terminal". */
   theme: string;
 }
 
-const EMPTY: Settings = { username: "", password: "", language: "", theme: "terminal" };
+const EMPTY: Settings = { username: "", password: "", language: "", theme: "light" };
 
 export async function loadSettings(bridge: EvenAppBridge): Promise<Settings> {
   let raw = "";
@@ -33,7 +33,7 @@ export async function loadSettings(bridge: EvenAppBridge): Promise<Settings> {
       username: parsed.username ?? "",
       password: parsed.password ?? "",
       language: parsed.language ?? "",
-      theme: parsed.theme ?? "dark",
+      theme: parsed.theme ?? "light",
     };
   } catch {
     return { ...EMPTY };

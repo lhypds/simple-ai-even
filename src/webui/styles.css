@@ -1,4 +1,21 @@
+/* Fira Code (variable, with ligatures) — used across the UI for a terminal feel.
+   Loaded from a CDN; if unreachable, the monospace fallbacks below kick in. */
+@import url(https://cdn.jsdelivr.net/npm/firacode@6.2.0/distr/fira_code.css);
+
 /* Dark is the default theme; the others override via [data-theme] on <html>. */
+:root[data-theme="light"] {
+  --bg: #ffffff;
+  --panel: #ffffff;
+  --border: #cccccc;
+  --text: #1a1c22;
+  --muted: #6b7280;
+  --accent: #1a1c22; /* monochrome — no color */
+  --btn: #000000; /* black */
+  --btn-text: #ffffff;
+  --placeholder: #9ca3af;
+  --focus: #1a1c22;
+}
+
 :root,
 :root[data-theme="dark"] {
   --bg: #0f1014;
@@ -11,19 +28,6 @@
   --btn-text: #e6e7ea;
   --placeholder: #5a5e6a;
   --focus: #9a9a9a;
-}
-
-:root[data-theme="light"] {
-  --bg: #ffffff;
-  --panel: #ffffff;
-  --border: #cccccc;
-  --text: #1a1c22;
-  --muted: #6b7280;
-  --accent: #1a1c22; /* monochrome — no color */
-  --btn: #000000; /* black */
-  --btn-text: #ffffff;
-  --placeholder: #9ca3af;
-  --focus: #1a1c22;
 }
 
 :root[data-theme="terminal"] {
@@ -47,6 +51,15 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Form controls don't inherit the page font by default — opt them in so buttons
+   and selects use Fira Code like the rest of the UI. */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
 html,
 body {
   /* Allow scrolling/panning but disable pinch-zoom on touch devices. */
@@ -60,10 +73,12 @@ body {
 body {
   margin: 0;
   font:
-    16px/1.5 system-ui,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+    16px/1.5 "Fira Code VF",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
   background: var(--bg);
   color: var(--text);
 }
@@ -135,7 +150,8 @@ body {
   white-space: pre-wrap;
   word-break: break-word;
   font:
-    14px/1.5 ui-monospace,
+    14px/1.5 "Fira Code VF",
+    ui-monospace,
     SFMono-Regular,
     "SF Mono",
     Menlo,
@@ -155,7 +171,7 @@ body {
 
 .term-input__prompt {
   color: var(--btn);
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-family: "Fira Code VF", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   font-weight: 600;
 }
 
@@ -167,7 +183,8 @@ body {
   background: var(--panel);
   color: var(--text);
   font:
-    16px/1.5 ui-monospace,
+    16px/1.5 "Fira Code VF",
+    ui-monospace,
     SFMono-Regular,
     "SF Mono",
     Menlo,

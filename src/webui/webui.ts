@@ -23,13 +23,13 @@ const LANGUAGES: Array<{ value: string; label: string }> = [
 
 // UI themes, applied via the `data-theme` attribute on <html> (see styles.css).
 const THEMES: Array<{ value: string; label: string }> = [
-  { value: "dark", label: "Dark" },
   { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
   { value: "terminal", label: "Terminal" },
 ];
 
 function applyTheme(theme: string): void {
-  document.documentElement.dataset.theme = theme || "terminal";
+  document.documentElement.dataset.theme = theme || "light";
 }
 
 export interface WebUI {
@@ -62,7 +62,7 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
     <div class="app">
       <header class="app__header">
         <div class="app__title">
-          simple ai - chat
+          Simple AI
           <span class="app__status" data-status></span>
         </div>
         <div class="app__actions">
@@ -76,7 +76,7 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
         <span class="term-input__prompt">&gt;</span>
         <input class="term-input__field" data-input-field type="text"
                placeholder="Type a message…" autocomplete="off" />
-        <button class="btn btn--primary" type="submit">Send</button>
+        <button class="btn btn--primary" type="submit">enter</button>
       </form>
     </div>
 
