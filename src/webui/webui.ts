@@ -8,7 +8,7 @@
 // This is a plain terminal view: output is printed as-is, not split into chat
 // bubbles. The glasses mirror the exact same text.
 
-import "./ui.css";
+import "./styles.css";
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 import { loadSettings, saveSettings } from "../utils/settingUtils";
 import { GEAR_SVG, USER_SVG, REFRESH_SVG } from "../assets/icons";
@@ -21,7 +21,7 @@ const LANGUAGES: Array<{ value: string; label: string }> = [
   { value: "zh", label: "中文" },
 ];
 
-// UI themes, applied via the `data-theme` attribute on <html> (see ui.css).
+// UI themes, applied via the `data-theme` attribute on <html> (see styles.css).
 const THEMES: Array<{ value: string; label: string }> = [
   { value: "dark", label: "Dark" },
   { value: "light", label: "Light" },
