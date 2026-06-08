@@ -228,8 +228,7 @@ async function main() {
   // audioEvent PCM bytes; ignore it while generating so the reply isn't interrupted by
   // stray speech.
   bridge.onEvenHubEvent((event) => {
-    const eventType =
-      event.textEvent?.eventType ?? event.listEvent?.eventType ?? event.sysEvent?.eventType;
+    const eventType = event.textEvent?.eventType ?? event.listEvent?.eventType ?? event.sysEvent?.eventType;
     if (eventType === OsEventTypeList.SCROLL_TOP_EVENT) {
       void display.showPreviousView();
       return;
