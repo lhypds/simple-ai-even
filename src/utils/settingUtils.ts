@@ -8,9 +8,6 @@ import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 
 const KEY = "webSettings";
 
-/** Default sc-bridge server, used when the user hasn't set one in Settings. */
-const DEFAULT_SC_SERVER_BASE_URL = "http://159.223.204.39:5173/";
-
 export interface Settings {
   username: string;
   password: string;
@@ -20,8 +17,6 @@ export interface Settings {
   language: string;
   /** UI theme: "light" | "dark" | "terminal". */
   theme: string;
-  /** Base URL of the sc-bridge server (serve.mjs). "" = relative (dev server). */
-  scServerBaseUrl: string;
   /** Whether to remember the username/password (the Login "Save" box). */
   loginSave: boolean;
 }
@@ -32,7 +27,6 @@ const EMPTY: Settings = {
   apiKey: "",
   language: "",
   theme: "light",
-  scServerBaseUrl: DEFAULT_SC_SERVER_BASE_URL,
   loginSave: true,
 };
 
@@ -80,7 +74,6 @@ export async function loadSettings(bridge: EvenAppBridge): Promise<Settings> {
       apiKey: parsed.apiKey ?? "",
       language: parsed.language ?? "",
       theme: parsed.theme ?? "light",
-      scServerBaseUrl: parsed.scServerBaseUrl ?? DEFAULT_SC_SERVER_BASE_URL,
       loginSave: parsed.loginSave ?? true,
     };
   } catch {

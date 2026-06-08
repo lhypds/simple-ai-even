@@ -2,27 +2,22 @@
 //
 // Talks to a sc-bridge server over SSE + POST. The server runs the `sc`
 // (simple-ai-chat) CLI; this client just streams its output and posts input back.
-// Two backends speak this protocol:
-//   - the dev-only Vite plugin in vite.config.ts (relative paths, same origin)
-//   - the standalone serve.mjs / serve.sh (an absolute URL, set in the published
-//     app via Settings → SC server URL)
-//
-// `connect(baseUrl)` (re)opens the stream against a server:
-//   - "" (empty)  -> relative paths — the dev server's built-in bridge
-//   - "https://…" -> a standalone server reachable from the device
+// The backend is the standalone serve.mjs / serve.sh, hosted at the hardcoded
+// SC_SERVER_BASE_URL below.
 //
 // Each client gets its own `session` id, sent with every request, so multiple
 // users never share one sc process / login / conversation on the server.
 
+/** Fixed sc-bridge server. The published app always talks to this host. */
+const SC_SERVER_BASE_URL = "http://159.223.204.39:5173/";
+
 export interface ScHandlers {
   onChunk: (text: string) => void; // a piece of CLI output arrived
   onReady: () => void; // CLI finished a reply and is idle again
-  onUnavailable?: () => void; // no backend reachable (e.g. URL unset/wrong)
+  onUnavailable?: () => void; // no backend reachable (e.g. server down)
 }
 
 export interface ScClient {
-  /** (Re)connect the output stream to a bridge server. Safe to call repeatedly. */
-  connect(baseUrl: string): void;
   login(username: string, password: string): Promise<void>;
   send(text: string): Promise<void>;
 }
@@ -37,11 +32,10 @@ function randomId(): string {
 
 export function connectSc(handlers: ScHandlers): ScClient {
   const session = randomId();
-  let baseUrl = "";
+  const baseUrl = SC_SERVER_BASE_URL.replace(/\/+$/, ""); // trim trailing slash(es)
   let source: EventSource | null = null;
 
-  const connect = (url: string) => {
-    baseUrl = (url || "").replace(/\/+$/, ""); // trim trailing slash(es)
+  const connect = () => {
     source?.close();
     source = new EventSource(`${baseUrl}/api/sc/stream?session=${encodeURIComponent(session)}`);
     source.addEventListener("chunk", (e) => handlers.onChunk(JSON.parse((e as MessageEvent).data)));
@@ -60,8 +54,9 @@ export function connectSc(handlers: ScHandlers): ScClient {
     });
   };
 
+  connect(); // open the stream immediately against the fixed server
+
   return {
-    connect,
     login: (username, password) => post("/api/sc/login", { username, password }),
     send: (text) => post("/api/sc/send", { text }),
   };

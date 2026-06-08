@@ -182,10 +182,6 @@ async function main() {
       if (apiKey) void startListening();
       else void stopListening();
     },
-    // (Re)connect the sc bridge to the configured server. Fired once at startup
-    // with the saved URL ("" = the dev server's relative bridge) and again
-    // whenever it changes in Settings.
-    onScServerChange: (baseUrl) => sc.connect(baseUrl),
   });
 
   if (!hasApiKey()) {

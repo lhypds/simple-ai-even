@@ -127,8 +127,6 @@ export interface WebUIOptions {
   onLanguageChange: (language: string) => void;
   /** OpenAI API key changed (also fired once with the saved value at startup). */
   onApiKeyChange: (apiKey: string) => void;
-  /** sc-bridge server URL changed (also fired once with the saved value at startup). */
-  onScServerChange: (baseUrl: string) => void;
 }
 
 export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions): Promise<WebUI> {
@@ -185,12 +183,7 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
         <label class="field">
           <span class="field__label">OpenAI API key</span>
           <input class="field__input" data-api-key type="password"
-                 placeholder="sk-…" autocomplete="off" />
-        </label>
-        <label class="field">
-          <span class="field__label">SC server URL</span>
-          <input class="field__input" data-sc-server type="url"
-                 placeholder="https://your-sc-server.example.com" autocomplete="off" />
+                 placeholder="sk-" autocomplete="off" />
         </label>
         <div class="field">
           <span class="field__label">Speech language</span>
@@ -222,7 +215,6 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
 
   const settingsModal = document.querySelector<HTMLDivElement>("[data-settings-modal]")!;
   const apiKeyInput = settingsModal.querySelector<HTMLInputElement>("[data-api-key]")!;
-  const scServerInput = settingsModal.querySelector<HTMLInputElement>("[data-sc-server]")!;
   const languageSelect = createDropdown(LANGUAGES, () => {});
   // Preview the theme live as the user picks (reverted on Cancel via closeSettings).
   const themeSelect = createDropdown(THEMES, (value) => applyTheme(value));
@@ -234,10 +226,8 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   let settings = await loadSettings(bridge);
   options.onLanguageChange(settings.language);
   options.onApiKeyChange(settings.apiKey);
-  options.onScServerChange(settings.scServerBaseUrl);
   applyTheme(settings.theme);
-  // Auto-login at startup if saved credentials exist (after onScServerChange has
-  // pointed the bridge at the right server).
+  // Auto-login at startup if saved credentials exist.
   if (settings.username && settings.password) {
     options.onLogin(settings.username, settings.password);
   }
@@ -323,7 +313,6 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   // --- settings modal (language only) -------------------------------------
   const openSettings = () => {
     apiKeyInput.value = settings.apiKey;
-    scServerInput.value = settings.scServerBaseUrl;
     languageSelect.value = settings.language;
     themeSelect.value = settings.theme;
     savedNote.classList.remove("modal__saved--show");
@@ -342,13 +331,11 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
 
   settingsModal.querySelector("[data-save]")!.addEventListener("click", async () => {
     const apiKey = apiKeyInput.value.trim();
-    const scServerBaseUrl = scServerInput.value.trim();
     const language = languageSelect.value;
     const theme = themeSelect.value;
-    settings = { ...settings, apiKey, scServerBaseUrl, language, theme };
+    settings = { ...settings, apiKey, language, theme };
     await saveSettings(bridge, settings);
     options.onApiKeyChange(apiKey);
-    options.onScServerChange(scServerBaseUrl);
     options.onLanguageChange(language);
     applyTheme(theme);
     savedNote.classList.add("modal__saved--show");
