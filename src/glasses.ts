@@ -15,6 +15,7 @@ import {
   TextContainerUpgrade,
   type EvenAppBridge,
 } from "@evenrealities/even_hub_sdk";
+import { tailRows } from "./utils/textUtils";
 
 const CONTAINER_ID = 1;
 const CONTAINER_NAME = "caption"; // max 16 chars
@@ -30,31 +31,11 @@ const BORDER_COLOR = 5;
 const PADDING = 12;
 
 // We can't command the device's native scroll, so to keep the newest text on screen
-// while generating we send only the tail that fits one screen — the bottom of the
-// reply then sits at the top of the visible area instead of scrolling off below.
-// These are rough estimates of the default font; tune against the real glasses.
+// while generating we send only the tail that fits one screen (see `tailRows`) — the
+// bottom of the reply then sits at the top of the visible area instead of scrolling
+// off below. These are rough estimates of the default font; tune against the glasses.
 const CHARS_PER_LINE = 48; // how many chars fit on one wrapped row
 const SCREEN_ROWS = 10; // how many wrapped rows fit vertically
-
-// Keep the last `maxRows` wrapped rows of `text`, dropping whole lines from the top.
-// If the bottom-most line alone overflows, keep just its trailing screenful of chars.
-function tailRows(text: string, maxRows: number): string {
-  if (maxRows < 1) maxRows = 1;
-  const wrapped = (line: string) => Math.max(1, Math.ceil(line.length / CHARS_PER_LINE));
-  const lines = text.split("\n");
-  const kept: string[] = [];
-  let used = 0;
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const rows = wrapped(lines[i]);
-    if (used + rows > maxRows) {
-      if (kept.length === 0) kept.unshift(lines[i].slice(-maxRows * CHARS_PER_LINE));
-      break;
-    }
-    used += rows;
-    kept.unshift(lines[i]);
-  }
-  return kept.join("\n");
-}
 
 export interface Display {
   // `follow`: trim to the last screenful so the bottom stays visible (used while
@@ -91,7 +72,7 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
       let body = text.replace(/\n+$/, "");
       // While generating, keep only the last screenful so the newest text stays in
       // view (reserve a row for the status line appended below).
-      if (follow) body = tailRows(body, SCREEN_ROWS - (status ? 1 : 0));
+      if (follow) body = tailRows(body, SCREEN_ROWS - (status ? 1 : 0), CHARS_PER_LINE);
       const content = status ? (body ? `${body}\n${status}` : status) : body;
       await bridge.textContainerUpgrade(
         new TextContainerUpgrade({

@@ -4,6 +4,7 @@ import { createWebUI } from "./ui";
 import { connectSc } from "./sc";
 import { SpeechSegmenter } from "./segmenter";
 import { hasApiKey, transcribe } from "./transcribe";
+import { trailingPrompt, stripTrailingPrompt } from "./utils/textUtils";
 
 // The glasses mic streams single-channel 16 kHz / 16-bit PCM.
 const SAMPLE_RATE = 16000;
@@ -43,7 +44,7 @@ async function main() {
   // the streaming reply alone.
   function renderAll() {
     const preview = draft && !generating;
-    const webView = preview ? webLog.replace(/(^|\n)[^\n]*?>[ \t]*$/, "$1") + `${lastPrompt}${draft}` : webLog;
+    const webView = preview ? stripTrailingPrompt(webLog) + `${lastPrompt}${draft}` : webLog;
     // On the glasses: show the in-progress draft while typing, the raw stream while
     // generating, and otherwise the conversation with the waiting prompt (e.g.
     // "gpt-5.5>") pinned at the end. The prompt is stripped from `terminal` once the CLI
@@ -126,7 +127,7 @@ async function main() {
     // prompt at the tail of the log, but not always (e.g. the very first input), so
     // strip any trailing prompt and re-add `lastPrompt` explicitly — this keeps the
     // `gpt-5.5>` tag in front of every input without ever duplicating it.
-    const stripped = webLog.replace(/(^|\n)[^\n]*?>[ \t]*$/, "$1");
+    const stripped = stripTrailingPrompt(webLog);
     webLog = (stripped + `${lastPrompt}${text}\n`).slice(-WEB_LOG_MAX);
     generating = true;
     void stopListening(); // clears the status; set "generating" after so it wins
@@ -193,12 +194,6 @@ async function main() {
   });
 
   await startListening();
-}
-
-// Extract the trailing CLI prompt (e.g. "gpt-5.5> ") from the output, if any.
-function trailingPrompt(text: string): string {
-  const m = text.match(/(?:^|\n)([^\n]*?>[ \t]*)$/);
-  return m ? m[1] : "";
 }
 
 main().catch(console.error);

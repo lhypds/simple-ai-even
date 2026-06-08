@@ -5,6 +5,8 @@
 // half); instead we accumulate audio while the user is talking and flush a segment
 // when they pause (a run of low-energy audio) or when a segment grows too long.
 
+import { rms, concatBytes } from "./utils/audioUtils";
+
 export interface SegmenterOptions {
   sampleRate: number;
   /** RMS below this (on the 0..32767 scale) counts as silence. */
@@ -69,33 +71,11 @@ export class SpeechSegmenter {
   /** Emit whatever is buffered (e.g. when the mic is turned off). */
   flush(): void {
     if (this.bufferedBytes >= this.minSegmentBytes) {
-      this.onSegment(concat(this.chunks, this.bufferedBytes));
+      this.onSegment(concatBytes(this.chunks, this.bufferedBytes));
     }
     this.chunks = [];
     this.bufferedBytes = 0;
     this.speaking = false;
     this.trailingSilenceBytes = 0;
   }
-}
-
-function rms(bytes: Uint8Array): number {
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const count = Math.floor(bytes.byteLength / BYTES_PER_SAMPLE);
-  if (count === 0) return 0;
-  let sumSquares = 0;
-  for (let i = 0; i < count; i++) {
-    const sample = view.getInt16(i * BYTES_PER_SAMPLE, true);
-    sumSquares += sample * sample;
-  }
-  return Math.sqrt(sumSquares / count);
-}
-
-function concat(chunks: Uint8Array[], total: number): Uint8Array {
-  const out = new Uint8Array(total);
-  let offset = 0;
-  for (const c of chunks) {
-    out.set(c, offset);
-    offset += c.byteLength;
-  }
-  return out;
 }
