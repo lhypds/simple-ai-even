@@ -60,6 +60,20 @@ textarea {
   font-family: inherit;
 }
 
+/* Reset native control appearance. On the device webview (unlike the modern
+   simulator), iOS/WebKit gives inputs and buttons intrinsic sizing/padding
+   that overrides our `height`, so the input and enter button render at
+   different heights. Removing the native appearance makes the box model
+   (height + border-box) authoritative on both. Checkboxes/radios keep their
+   native look (appearance:none would render them as blank squares). */
+button,
+select,
+textarea,
+input:not([type="checkbox"]):not([type="radio"]) {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 html,
 body {
   /* Allow scrolling/panning but disable pinch-zoom on touch devices. */
@@ -251,6 +265,25 @@ body {
   margin-bottom: 6px;
 }
 
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.checkbox input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+  /* Gray check fill instead of the OS default (blue). */
+  accent-color: var(--muted);
+}
+
 .field__input {
   /* One fixed height for text inputs AND selects so they line up. Vertical
      centering is automatic for single-line inputs/selects, so we only pad
@@ -341,7 +374,7 @@ body {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 20px;
 }
 
 .modal__actions .btn {
@@ -378,4 +411,11 @@ body {
 
 .modal__saved--show {
   opacity: 1;
+}
+
+.modal__version {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
 }

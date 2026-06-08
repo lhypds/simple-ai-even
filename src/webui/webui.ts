@@ -13,6 +13,9 @@ import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 import { loadSettings, saveSettings } from "../utils/settingUtils";
 import { GEAR_SVG, USER_SVG, REFRESH_SVG } from "../assets/icons";
 
+// App version, injected at build time from app.json (see vite.config.ts `define`).
+declare const __APP_VERSION__: string;
+
 // Speech-to-text language choices. "" means auto-detect.
 const LANGUAGES: Array<{ value: string; label: string }> = [
   { value: "", label: "Auto-detect" },
@@ -42,10 +45,7 @@ interface Dropdown {
 // A fully app-styled dropdown to replace native <select>, whose option menu the
 // webview renders in system style (unstylable). Button shows the current label;
 // clicking toggles a styled menu. `onChange` fires only on user selection.
-function createDropdown(
-  items: Array<{ value: string; label: string }>,
-  onChange: (value: string) => void,
-): Dropdown {
+function createDropdown(items: Array<{ value: string; label: string }>, onChange: (value: string) => void): Dropdown {
   const el = document.createElement("div");
   el.className = "select";
 
@@ -168,6 +168,10 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
           <span class="field__label">Password</span>
           <input class="field__input" data-password type="password" autocomplete="current-password" />
         </label>
+        <label class="checkbox">
+          <input type="checkbox" data-login-save />
+          <span>Save username and password</span>
+        </label>
         <div class="modal__actions">
           <button class="btn" data-close-login>Cancel</button>
           <button class="btn btn--primary" data-do-login>Login</button>
@@ -201,6 +205,7 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
           <button class="btn" data-close-settings>Cancel</button>
           <button class="btn btn--primary" data-save>Save</button>
         </div>
+        <div class="modal__version">Version ${__APP_VERSION__}</div>
       </div>
     </div>
   `;
@@ -213,6 +218,7 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   const loginModal = document.querySelector<HTMLDivElement>("[data-login-modal]")!;
   const usernameInput = loginModal.querySelector<HTMLInputElement>("[data-username]")!;
   const passwordInput = loginModal.querySelector<HTMLInputElement>("[data-password]")!;
+  const loginSaveCheckbox = loginModal.querySelector<HTMLInputElement>("[data-login-save]")!;
 
   const settingsModal = document.querySelector<HTMLDivElement>("[data-settings-modal]")!;
   const apiKeyInput = settingsModal.querySelector<HTMLInputElement>("[data-api-key]")!;
@@ -288,6 +294,7 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   const openLogin = () => {
     usernameInput.value = settings.username;
     passwordInput.value = settings.password;
+    loginSaveCheckbox.checked = settings.loginSave;
     loginModal.classList.add("modal--open");
   };
   const closeLogin = () => loginModal.classList.remove("modal--open");
@@ -301,8 +308,14 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   loginModal.querySelector("[data-do-login]")!.addEventListener("click", async () => {
     const username = usernameInput.value.trim();
     const password = passwordInput.value;
-    settings = { ...settings, username, password };
+    const save = loginSaveCheckbox.checked;
+    // Persist the credentials only when "Save" is checked; otherwise forget any
+    // previously stored ones so this is a one-session login (no auto-login next time).
+    settings = save
+      ? { ...settings, username, password, loginSave: true }
+      : { ...settings, username: "", password: "", loginSave: false };
     await saveSettings(bridge, settings);
+    // Log in with the entered values regardless of whether we stored them.
     if (username) options.onLogin(username, password);
     closeLogin();
   });

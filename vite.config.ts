@@ -1,7 +1,12 @@
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
+
+// App version, surfaced in the Settings page. Read from app.json (the single
+// source of truth) and injected as a compile-time constant (see `define` below).
+const APP_VERSION: string = JSON.parse(readFileSync(new URL("./app.json", import.meta.url), "utf-8")).version;
 
 // ---------------------------------------------------------------------------
 // sc-bridge: a dev-only backend that drives the `simple-ai-chat` CLI (`sc`).
@@ -147,6 +152,13 @@ function scBridge(): Plugin {
 
 export default defineConfig({
   base: "./",
+  // Expose the app version to the client code as a compile-time constant.
+  define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
+  // The packaged app runs in the device's (older) WebKit, not the modern
+  // simulator. Target an older Safari so the build keeps/adds vendor prefixes
+  // like -webkit-appearance — without this the minifier drops them and controls
+  // (e.g. the input vs. enter button) render at native sizes on-device only.
+  build: { cssTarget: "safari13", target: "safari13" },
   server: { host: "0.0.0.0" },
   plugins: [scBridge()],
 });

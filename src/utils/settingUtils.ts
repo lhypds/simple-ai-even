@@ -19,6 +19,8 @@ export interface Settings {
   theme: string;
   /** Base URL of the sc-bridge server (server.mjs). "" = relative (dev server). */
   scServerBaseUrl: string;
+  /** Whether to remember the username/password (the Login "Save" box). */
+  loginSave: boolean;
 }
 
 const EMPTY: Settings = {
@@ -28,6 +30,7 @@ const EMPTY: Settings = {
   language: "",
   theme: "light",
   scServerBaseUrl: "",
+  loginSave: true,
 };
 
 // The bridge's storage calls can hang on the real device (they resolve on the
@@ -75,6 +78,7 @@ export async function loadSettings(bridge: EvenAppBridge): Promise<Settings> {
       language: parsed.language ?? "",
       theme: parsed.theme ?? "light",
       scServerBaseUrl: parsed.scServerBaseUrl ?? "",
+      loginSave: parsed.loginSave ?? true,
     };
   } catch {
     return { ...EMPTY };
