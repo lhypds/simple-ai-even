@@ -1,7 +1,7 @@
 {
-  "package_id": "com.example.g2demo",
+  "package_id": "com.gcc3.simple-ai-g2",
   "edition": "202601",
-  "name": "G2 Demo",
+  "name": "Simple AI",
   "version": "0.1.0",
   "min_app_version": "2.0.0",
   "min_sdk_version": "0.0.7",
@@ -10,16 +10,12 @@
     {
       "name": "network",
       "desc": "This app needs network access to transcribe glasses microphone audio.",
-      "whitelist": [
-        "https://api.openai.com"
-      ]
+      "whitelist": ["https://api.openai.com"]
     },
     {
       "name": "location",
       "desc": "This app needs to access the location in order to ..."
     }
   ],
-  "supported_languages": [
-    "en"
-  ]
+  "supported_languages": ["en"]
 }
