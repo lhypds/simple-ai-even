@@ -54,8 +54,11 @@ async function main() {
     else if (generating) glassesView = terminal;
     else glassesView = terminal ? `${terminal}\n${lastPrompt}` : lastPrompt;
     ui.render(webView);
-    // Follow the bottom while generating so the streaming reply stays in view.
-    void display.render({ status: statusText, text: glassesView, follow: generating });
+    // Follow the bottom whenever we're not previewing a typed draft: the streaming
+    // reply stays in view while generating, and once it finishes the tail — ending in
+    // the waiting "gpt-5.5>" prompt — stays pinned to the bottom instead of jumping
+    // back to the top.
+    void display.render({ status: statusText, text: glassesView, follow: !preview });
   }
 
   // Append CLI output to both buffers. They're independent: `terminal` is kept tidy
