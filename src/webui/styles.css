@@ -103,7 +103,9 @@ body {
 
 .app__title {
   display: flex;
-  align-items: center;
+  /* Align the title and status text on the same baseline (they differ in size,
+     so centering would leave them visually misaligned). */
+  align-items: baseline;
   gap: 10px;
   font-size: 18px;
   font-weight: 600;
@@ -244,8 +246,12 @@ body {
 }
 
 .field__input {
+  /* One fixed height for text inputs AND selects so they line up. Vertical
+     centering is automatic for single-line inputs/selects, so we only pad
+     horizontally — 48px is tall enough that the text never clips (border-box). */
   width: 100%;
-  padding: 10px 12px;
+  height: 48px;
+  padding: 0 12px;
   border: 1px solid var(--btn);
   border-radius: 10px;
   background: var(--bg);
@@ -258,13 +264,71 @@ body {
   border-color: var(--focus);
 }
 
-select.field__input {
-  /* Let the select size to its text. A fixed small height plus padding leaves
-     no room for the label in Safari (border-box), which clips the text. */
-  height: auto;
-  min-height: 44px;
-  padding-block: 10px;
-  line-height: 1.2;
+/* Custom dropdown (replaces native <select>, whose option menu the webview
+   renders in unstylable system style). The button reuses .field__input so it
+   matches the text inputs exactly; the menu is fully app-styled. */
+.select {
+  position: relative;
+}
+
+.select__button {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  padding-right: 36px; /* room for the chevron */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%236b7280' stroke-width='1.5'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+.select__label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select--open .select__button {
+  border-color: var(--focus);
+}
+
+.select__menu {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 4px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 10;
+  background: var(--bg);
+  border: 1px solid var(--btn);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  max-height: 220px;
+  overflow-y: auto;
+  display: none;
+}
+
+.select--open .select__menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* space between options */
+}
+
+.select__option {
+  padding: 10px 12px;
+  border: 1px solid transparent; /* reserved so hover doesn't shift layout */
+  border-radius: 8px;
+  font-size: 16px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.select__option:hover,
+.select__option--active {
+  border-color: var(--focus);
 }
 
 .modal__actions {

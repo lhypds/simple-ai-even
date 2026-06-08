@@ -1,6 +1,6 @@
 import { waitForEvenAppBridge } from "@evenrealities/even_hub_sdk";
 import { createDisplay } from "./glassesui/glasses";
-import { createWebUI } from "./webui/webui";
+import { createWebUI, type WebUI } from "./webui/webui";
 import { connectSc } from "./utils/scUtils";
 import { SpeechSegmenter } from "./utils/speechUtils";
 import { hasApiKey, setApiKey, transcribe } from "./utils/transcribeUtils";
@@ -38,6 +38,11 @@ async function main() {
   // (prefixed with the prompt) so the glasses show what's being typed before submit.
   let draft = "";
 
+  // Assigned once createWebUI resolves. Declared up front (and accessed with `?.`)
+  // because callbacks passed to createWebUI — e.g. onApiKeyChange — can fire during
+  // its setup, before this is assigned; the glasses still render in the meantime.
+  let ui: WebUI | undefined;
+
   // Render both views from the current buffers, overlaying the live draft line.
   // While idle and typing, we preview the line exactly as `ask` would echo it:
   // the model prompt followed by the in-progress text. During generation we leave
@@ -54,7 +59,7 @@ async function main() {
     if (preview) glassesView = `${lastPrompt}${draft}`;
     else if (generating) glassesView = terminal;
     else glassesView = terminal ? `${terminal}\n${lastPrompt}` : lastPrompt;
-    ui.render(webView);
+    ui?.render(webView);
     // Follow the bottom whenever we're not previewing a typed draft: the streaming
     // reply stays in view while generating, and once it finishes the tail — ending in
     // the waiting "gpt-5.5>" prompt — stays pinned to the bottom instead of jumping
@@ -75,11 +80,19 @@ async function main() {
 
   function setStatus(text: string) {
     statusText = text;
-    ui.setStatus(text);
+    ui?.setStatus(text);
     renderAll();
   }
 
   async function startListening() {
+    // Voice recognition needs the OpenAI key. Never enable the mic or show
+    // "listening" without one — guard here so every caller (startup, and onReady
+    // after a typed exchange) is covered.
+    if (!hasApiKey()) {
+      listening = false;
+      setStatus("● no API key");
+      return;
+    }
     const ok = await bridge.audioControl(true);
     listening = ok;
     setStatus(ok ? "● listening" : "⚠ mic failed");
@@ -147,7 +160,7 @@ async function main() {
     void sc.send(":reset");
   }
 
-  const ui = await createWebUI(bridge, {
+  ui = await createWebUI(bridge, {
     onSubmit: (text) => ask(text),
     onRefresh: () => reset(),
     onInput: (text) => {
@@ -163,8 +176,11 @@ async function main() {
     },
     onApiKeyChange: (apiKey) => {
       setApiKey(apiKey);
-      // Recover from the no-key prompt once a key is entered in Settings.
-      if (apiKey) setStatus("● listening");
+      // Voice recognition needs the OpenAI key, so the mic follows the key: start
+      // listening when one is present (also on startup, with the saved key), stop
+      // when it's missing or removed. With no key we never start listening.
+      if (apiKey) void startListening();
+      else void stopListening();
     },
     // (Re)connect the sc bridge to the configured server. Fired once at startup
     // with the saved URL ("" = the dev server's relative bridge) and again
@@ -173,8 +189,8 @@ async function main() {
   });
 
   if (!hasApiKey()) {
-    setStatus("⚠ No API key");
-    emit("Open Settings (⚙) and paste your OpenAI API key to start.\n");
+    setStatus("● no API key");
+    emit("Open Settings and paste your OpenAI API key to start voice recognition.\n");
   }
 
   // Each closed segment is sent off for transcription. We tag segments so a slow
@@ -214,7 +230,9 @@ async function main() {
     if (pcm && pcm.byteLength > 0) segmenter.push(pcm);
   });
 
-  await startListening();
+  // Listening is driven by onApiKeyChange (fired with the saved key while
+  // createWebUI ran above): it starts the mic when a key is present and stops it
+  // otherwise — so with no API key we never start listening.
 }
 
 main().catch(console.error);

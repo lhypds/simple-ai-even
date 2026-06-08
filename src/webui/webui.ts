@@ -32,6 +32,82 @@ function applyTheme(theme: string): void {
   document.documentElement.dataset.theme = theme || "light";
 }
 
+interface Dropdown {
+  /** The control's root element — append this where the dropdown should appear. */
+  el: HTMLElement;
+  /** Selected option value (get/set). Setting it updates the label, no callback. */
+  value: string;
+}
+
+// A fully app-styled dropdown to replace native <select>, whose option menu the
+// webview renders in system style (unstylable). Button shows the current label;
+// clicking toggles a styled menu. `onChange` fires only on user selection.
+function createDropdown(
+  items: Array<{ value: string; label: string }>,
+  onChange: (value: string) => void,
+): Dropdown {
+  const el = document.createElement("div");
+  el.className = "select";
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "field__input select__button";
+  const labelEl = document.createElement("span");
+  labelEl.className = "select__label";
+  button.appendChild(labelEl);
+  el.appendChild(button);
+
+  const menu = document.createElement("ul");
+  menu.className = "select__menu";
+  el.appendChild(menu);
+
+  let current = items[0]?.value ?? "";
+  const optionEls = new Map<string, HTMLLIElement>();
+
+  const setValue = (v: string) => {
+    const item = items.find((i) => i.value === v) ?? items[0];
+    current = item?.value ?? "";
+    labelEl.textContent = item?.label ?? "";
+    for (const [val, li] of optionEls) li.classList.toggle("select__option--active", val === current);
+  };
+
+  const close = () => el.classList.remove("select--open");
+
+  for (const item of items) {
+    const li = document.createElement("li");
+    li.className = "select__option";
+    li.textContent = item.label;
+    li.addEventListener("click", () => {
+      setValue(item.value);
+      close();
+      onChange(item.value);
+    });
+    menu.appendChild(li);
+    optionEls.set(item.value, li);
+  }
+
+  button.addEventListener("click", (e) => {
+    e.stopPropagation(); // don't let the document handler immediately close it
+    el.classList.toggle("select--open");
+  });
+  // Close when clicking/tapping anywhere outside this control.
+  document.addEventListener("click", (e) => {
+    if (!el.contains(e.target as Node)) close();
+  });
+
+  setValue(current);
+
+  return {
+    el,
+    get value() {
+      return current;
+    },
+    set value(v: string) {
+      setValue(v);
+    },
+  };
+}
+
 export interface WebUI {
   setStatus(text: string): void;
   /** Replace the terminal output with the given text (kept in sync with the glasses). */
@@ -58,9 +134,6 @@ export interface WebUIOptions {
 export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions): Promise<WebUI> {
   const root = document.querySelector<HTMLDivElement>("#app");
   if (!root) throw new Error("#app element not found");
-
-  const langOptions = LANGUAGES.map((l) => `<option value="${l.value}">${l.label}</option>`).join("");
-  const themeOptions = THEMES.map((t) => `<option value="${t.value}">${t.label}</option>`).join("");
 
   root.innerHTML = `
     <div class="app">
@@ -115,14 +188,14 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
           <input class="field__input" data-sc-server type="url"
                  placeholder="https://your-sc-server.example.com" autocomplete="off" />
         </label>
-        <label class="field">
+        <div class="field">
           <span class="field__label">Speech language</span>
-          <select class="field__input" data-language>${langOptions}</select>
-        </label>
-        <label class="field">
+          <div data-language></div>
+        </div>
+        <div class="field">
           <span class="field__label">Theme</span>
-          <select class="field__input" data-theme>${themeOptions}</select>
-        </label>
+          <div data-theme></div>
+        </div>
         <div class="modal__actions">
           <span class="modal__saved" data-saved>Saved ✓</span>
           <button class="btn" data-close-settings>Cancel</button>
@@ -144,8 +217,11 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   const settingsModal = document.querySelector<HTMLDivElement>("[data-settings-modal]")!;
   const apiKeyInput = settingsModal.querySelector<HTMLInputElement>("[data-api-key]")!;
   const scServerInput = settingsModal.querySelector<HTMLInputElement>("[data-sc-server]")!;
-  const languageSelect = settingsModal.querySelector<HTMLSelectElement>("[data-language]")!;
-  const themeSelect = settingsModal.querySelector<HTMLSelectElement>("[data-theme]")!;
+  const languageSelect = createDropdown(LANGUAGES, () => {});
+  // Preview the theme live as the user picks (reverted on Cancel via closeSettings).
+  const themeSelect = createDropdown(THEMES, (value) => applyTheme(value));
+  settingsModal.querySelector<HTMLDivElement>("[data-language]")!.appendChild(languageSelect.el);
+  settingsModal.querySelector<HTMLDivElement>("[data-theme]")!.appendChild(themeSelect.el);
   const savedNote = settingsModal.querySelector<HTMLSpanElement>("[data-saved]")!;
 
   // Hold the persisted settings so saving one modal doesn't clobber the other's fields.
@@ -245,9 +321,6 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   settingsModal.addEventListener("click", (e) => {
     if (e.target === settingsModal) closeSettings();
   });
-
-  // Preview the theme immediately; revert to the saved one if the modal is cancelled.
-  themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
 
   settingsModal.querySelector("[data-save]")!.addEventListener("click", async () => {
     const apiKey = apiKeyInput.value.trim();
