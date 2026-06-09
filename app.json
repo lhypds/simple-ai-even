@@ -9,12 +9,12 @@
   "permissions": [
     {
       "name": "network",
-      "desc": "This app needs network access to transcribe glasses microphone audio.",
-      "whitelist": ["https://api.openai.com"]
+      "desc": "This app needs network access to reach the simple-ai-chat bridge and to transcribe glasses microphone audio.",
+      "whitelist": ["https://api.openai.com", "http://159.223.204.39:8787"]
     },
     {
-      "name": "location",
-      "desc": "This app needs to access the location in order to ..."
+      "name": "microphone",
+      "desc": "This app needs the glasses microphone to capture speech for voice transcription."
     }
   ],
   "supported_languages": ["en"]

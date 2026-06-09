@@ -221,6 +221,14 @@ async function main() {
     setStatus("● listening");
   }
 
+  // Release resources and tear down the glasses page container. Called when the host
+  // signals the app is exiting (system close or abnormal exit) so the mic is freed and
+  // the container is shut down cleanly rather than left dangling.
+  async function shutdown() {
+    await stopListening();
+    await bridge.shutDownPageContainer(0); // 0 = exit immediately
+  }
+
   // Events from the glasses. The caption container captures touch-bar scrolls
   // (isEventCapture), which arrive as SCROLL_TOP/BOTTOM and page through the saved
   // session transcript: up shows the previous (older) view, down the next (newer) one,
@@ -239,6 +247,12 @@ async function main() {
     }
     if (eventType === OsEventTypeList.DOUBLE_CLICK_EVENT) {
       reset();
+      return;
+    }
+    // The host is closing the app (or it exited abnormally): free the mic and shut the
+    // page container down cleanly.
+    if (eventType === OsEventTypeList.SYSTEM_EXIT_EVENT || eventType === OsEventTypeList.ABNORMAL_EXIT_EVENT) {
+      void shutdown();
       return;
     }
     if (!listening) return;
