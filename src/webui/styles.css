@@ -211,7 +211,7 @@ body {
   width: 100%;
   max-width: 380px;
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 9px;
   padding: 22px;
 }
