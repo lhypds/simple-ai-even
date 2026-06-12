@@ -29,9 +29,9 @@ const SCREEN_HEIGHT = 288;
 // border width on every side so the stroke stays fully on-screen, and padding
 // is widened so text never touches the border.
 const BORDER_WIDTH = 1;
-const BORDER_RADIUS = 28;
+const BORDER_RADIUS = 9;
 const BORDER_COLOR = 5;
-const PADDING = 12;
+const PADDING = 5;
 
 // We can't command the device's native scroll, so we only ever send the tail that
 // fits one screen (see `tailRows`); if we send more, the content overflows the usable
