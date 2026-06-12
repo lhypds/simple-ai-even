@@ -567,6 +567,8 @@ body {
     opacity 0.2s,
     transform 0.2s;
   z-index: 100;
+  max-width: 260px;
+  width: calc(100% - 40px);
 }
 
 .toast--show {
