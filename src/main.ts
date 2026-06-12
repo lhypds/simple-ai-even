@@ -138,6 +138,7 @@ async function main() {
       // A reply finished: resume listening for the next utterance.
       if (generating) {
         generating = false;
+        renderAll(); // show cursor immediately, regardless of whether listening starts
         void startListening();
       }
       // Flush any queued login AFTER the prompt is rendered, so echoLogin sees the
@@ -206,7 +207,7 @@ async function main() {
       // Typing takes over from the mic: stop listening on the first keystroke so a
       // typed message isn't competing with captured speech. Resume when cleared.
       if (text && listening) void stopListening();
-      else if (!text && !listening) void startListening();
+      else if (!text && !listening && !generating) void startListening();
       renderAll();
     },
     // Manual login (button) goes through immediately — the CLI is already idle by
