@@ -23,8 +23,8 @@ export function tailRows(text: string, maxRows: number, charsPerLine: number): s
 }
 
 // Break text into the visual rows the glasses draw: hard newlines split rows, and a
-// line longer than `charsPerLine` wraps onto consecutive rows. Used to page through the
-// saved session transcript a screenful at a time (see the glasses scrollback).
+// line longer than `charsPerLine` wraps onto consecutive rows. Used to estimate row
+// counts — the firmware applies the same character-boundary wrapping when it renders.
 export function visualRows(text: string, charsPerLine: number): string[] {
   const rows: string[] = [];
   for (const line of text.split("\n")) {
@@ -35,6 +35,51 @@ export function visualRows(text: string, charsPerLine: number): string[] {
     for (let i = 0; i < line.length; i += charsPerLine) rows.push(line.slice(i, i + charsPerLine));
   }
   return rows;
+}
+
+// Group the lines of `text` into screenfuls, each holding at most `maxRows` visual rows.
+// Pages are returned oldest-first. Long lines that would leave a page half-empty are
+// split at word boundaries to fill the page; the remainder continues on the next page.
+// This keeps pages full and ensures no word is split across a page turn.
+export function buildPages(text: string, charsPerLine: number, maxRows: number): string[][] {
+  const rowCount = (s: string) => Math.max(1, Math.ceil(s.length / charsPerLine));
+  const pages: string[][] = [];
+  let current: string[] = [];
+  let used = 0;
+
+  for (const origLine of text.split("\n")) {
+    let seg = origLine;
+    // A single original line may be split across multiple pages if it is very long.
+    while (true) {
+      const rows = rowCount(seg);
+      if (used + rows <= maxRows) {
+        current.push(seg);
+        used += rows;
+        break;
+      }
+      // seg doesn't fit whole. Fill the remaining rows on the current page with a
+      // word-boundary prefix, then continue with the rest on a new page.
+      const rowsLeft = maxRows - used;
+      if (rowsLeft > 0) {
+        const maxChars = rowsLeft * charsPerLine;
+        if (seg.length <= maxChars) {
+          // Fits in rowsLeft rows (ceil check passes) — add whole and close page.
+          current.push(seg);
+          used += rows;
+          break;
+        }
+        const sp = seg.lastIndexOf(" ", maxChars);
+        const cut = sp > 0 ? sp : maxChars; // fall back to hard break (e.g. URLs, CJK)
+        current.push(seg.slice(0, cut));
+        seg = seg.slice(cut + (seg[cut] === " " ? 1 : 0));
+      }
+      // Commit the current page and start a fresh one.
+      if (current.length > 0) { pages.push(current); current = []; used = 0; }
+      if (seg.length === 0) break;
+    }
+  }
+  if (current.length > 0) pages.push(current);
+  return pages;
 }
 
 // Extract the trailing CLI prompt (e.g. "gpt-5.5> ") from the output, if any.

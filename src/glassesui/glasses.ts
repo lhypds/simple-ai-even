@@ -18,7 +18,7 @@ import {
   TextContainerUpgrade,
   type EvenAppBridge,
 } from "@evenrealities/even_hub_sdk";
-import { tailRows, visualRows } from "../utils/textUtils";
+import { tailRows, buildPages } from "../utils/textUtils";
 
 const CONTAINER_ID = 1;
 const CONTAINER_NAME = "caption"; // max 16 chars
@@ -89,8 +89,8 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
   // The most recent live state, so a scroll event (which carries no text) can render
   // off it, and so `followLive` can redraw the live view.
   let last = { status: "", text: "", history: "" };
-  // Rows scrolled up from the bottom of `frozen`; 0 = bottom-most page.
-  let offset = 0;
+  // Pages scrolled up from the newest page of `frozen`; 0 = newest (bottom-most) page.
+  let pageIndex = 0;
   // Snapshot of the session transcript taken when the user first scrolls up. Paging
   // works off this fixed copy so the view doesn't drift as new text streams in.
   // `null` = following the live output.
@@ -154,19 +154,16 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
   }
 
   async function renderHistory() {
-    const rows = visualRows(frozen ?? "", CHARS_PER_LINE);
-    const total = rows.length;
-    const maxOffset = Math.max(0, total - VIEW_ROWS);
-    offset = Math.min(Math.max(offset, 0), maxOffset);
-    const end = total - offset; // exclusive; the bottom row of this page
-    const start = Math.max(0, end - VIEW_ROWS);
-    const windowText = rows.slice(start, end).join("\n");
-    // Position indicator: page 1 is the oldest screenful, the last page is the
-    // newest. Scrolling down past the last page returns to the live view.
-    // Derive page from `end` so non-uniform final pages still reach 1/n.
-    const pages = Math.max(1, Math.ceil(total / VIEW_ROWS));
-    const pageFromTop = Math.max(1, Math.ceil(end / VIEW_ROWS));
-    const indicator = `↕ ${pageFromTop}/${pages}`;
+    // Pages are groups of original lines — oldest page first. Sending whole original
+    // lines lets the firmware wrap them the same way it wraps the live view.
+    const pages = buildPages(frozen ?? "", CHARS_PER_LINE, VIEW_ROWS);
+    const total = pages.length;
+    pageIndex = Math.min(Math.max(pageIndex, 0), total - 1);
+    // pageIndex 0 = newest page (last in array), increasing = older.
+    const pi = total - 1 - pageIndex;
+    const windowText = (pages[pi] ?? []).join("\n");
+    // Indicator: page 1 = oldest, page `total` = newest.
+    const indicator = `↕ ${pi + 1}/${total}`;
     await send(windowText ? `${windowText}\n${indicator}` : indicator);
   }
 
@@ -182,20 +179,20 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
       if (frozen === null) {
         const snapshot = last.history.replace(/\n+$/, "");
         // Nothing above the current screen — the whole session already fits.
-        if (visualRows(snapshot, CHARS_PER_LINE).length <= VIEW_ROWS) return;
+        if (buildPages(snapshot, CHARS_PER_LINE, VIEW_ROWS).length <= 1) return;
         frozen = snapshot;
-        offset = 0;
+        pageIndex = 0;
       }
-      offset += VIEW_ROWS;
+      pageIndex += 1;
       await renderHistory();
     },
 
     async showNextView() {
       if (frozen === null) return; // already following live
-      offset -= VIEW_ROWS;
-      if (offset <= 0) {
+      pageIndex -= 1;
+      if (pageIndex <= 0) {
         frozen = null;
-        offset = 0;
+        pageIndex = 0;
         await scheduleLiveRender();
         return;
       }
@@ -204,7 +201,7 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
 
     followLive() {
       frozen = null;
-      offset = 0;
+      pageIndex = 0;
     },
 
     setCursor(show: boolean) {
