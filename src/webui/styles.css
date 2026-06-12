@@ -214,16 +214,18 @@ body {
   border: none;
   border-radius: 9px;
   padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .modal__title {
-  margin: 0 0 16px;
+  margin: 0;
   font-size: 18px;
 }
 
 .field {
   display: block;
-  margin-bottom: 14px;
 }
 
 .field__label {
@@ -237,7 +239,6 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 14px;
   font-size: 14px;
   color: var(--text);
   cursor: pointer;
@@ -257,7 +258,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 14px;
+  height: 48px;
   font-size: 14px;
   color: var(--text);
   cursor: pointer;
@@ -477,7 +478,6 @@ body {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 20px;
 }
 
 .modal__actions .btn {
@@ -517,7 +517,6 @@ body {
 }
 
 .modal__version {
-  margin-top: 20px;
   text-align: center;
   font-size: 12px;
   color: var(--muted);

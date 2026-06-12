@@ -215,6 +215,11 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
     <div class="modal" data-settings-modal>
       <div class="modal__box">
         <h2 class="modal__title" data-i18n-settings-title>${t("settingsTitle")}</h2>
+        <label class="switch">
+          <span data-i18n-transcription>${t("toggleTranscription")}</span>
+          <input type="checkbox" data-transcription />
+          <span class="switch__track"><span class="switch__thumb"></span></span>
+        </label>
         <label class="field">
           <span class="field__label" data-i18n-api-key>${t("fieldApiKey")}</span>
           <input class="field__input" data-api-key type="password"
@@ -231,11 +236,6 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
         <label class="switch">
           <span data-i18n-cursor-blink>${t("toggleCursorBlink")}</span>
           <input type="checkbox" data-cursor-blink />
-          <span class="switch__track"><span class="switch__thumb"></span></span>
-        </label>
-        <label class="switch">
-          <span data-i18n-transcription>${t("toggleTranscription")}</span>
-          <input type="checkbox" data-transcription />
           <span class="switch__track"><span class="switch__thumb"></span></span>
         </label>
         <div class="modal__actions">
