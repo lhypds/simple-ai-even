@@ -563,6 +563,7 @@ body {
   color: var(--text);
   font-size: 13px;
   pointer-events: none;
+  opacity: 0;
   transition:
     opacity 0.2s,
     transform 0.2s;
