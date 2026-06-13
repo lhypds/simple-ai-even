@@ -1,6 +1,6 @@
 
-simple-ai-even
-==============
+sc-even
+=======
 
 
 Simple AI for Even G2 smartglasses.
@@ -14,6 +14,9 @@ Run `./package.sh`
 
 Upload the generated `.ehpk` file to  
 [Even G2 Protal](https://hub.evenrealities.com/)  
+
+Manage  
+[Plugin Page](https://hub.evenrealities.com/hub/com.gcc3.g2sc)
 
 
 sc-bridge API
