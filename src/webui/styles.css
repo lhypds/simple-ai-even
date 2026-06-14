@@ -116,10 +116,9 @@ body {
 }
 
 .app__title {
+  margin-top: 3px;
   display: flex;
-  /* Align the title and status text on the same baseline (they differ in size,
-     so centering would leave them visually misaligned). */
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   font-size: 14px;
   font-weight: 600;
