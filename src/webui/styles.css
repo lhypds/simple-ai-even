@@ -469,7 +469,7 @@ body {
   border: 1px solid var(--btn);
   border-radius: 9px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  max-height: 220px;
+  max-height: 280px;
   overflow-y: auto;
   scrollbar-width: none; /* Firefox */
   display: none;
@@ -483,6 +483,19 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px; /* space between options */
+}
+
+.select__search-wrap {
+  list-style: none;
+  padding: 0 0 4px;
+}
+
+.select__search {
+  width: 100%;
+  box-sizing: border-box;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 13px;
 }
 
 .select__option {

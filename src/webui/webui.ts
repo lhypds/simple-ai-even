@@ -20,11 +20,74 @@ declare const __APP_VERSION__: string;
 function speechLanguages() {
   return [
     { value: "", label: t("langAuto") },
+    { value: "af", label: "Afrikaans" },
+    { value: "sq", label: "Shqip" },
+    { value: "ar", label: "العربية" },
+    { value: "hy", label: "Հայերեն" },
+    { value: "az", label: "Azərbaycanca" },
+    { value: "eu", label: "Euskara" },
+    { value: "be", label: "Беларуская" },
+    { value: "bn", label: "বাংলা" },
+    { value: "bs", label: "Bosanski" },
+    { value: "bg", label: "Български" },
+    { value: "ca", label: "Català" },
+    { value: "hr", label: "Hrvatski" },
+    { value: "cs", label: "Čeština" },
+    { value: "da", label: "Dansk" },
+    { value: "nl", label: "Nederlands" },
     { value: "en", label: "English" },
+    { value: "et", label: "Eesti" },
+    { value: "fi", label: "Suomi" },
+    { value: "fr", label: "Français" },
+    { value: "gl", label: "Galego" },
+    { value: "ka", label: "ქართული" },
+    { value: "de", label: "Deutsch" },
+    { value: "el", label: "Ελληνικά" },
+    { value: "gu", label: "ગુજરાતી" },
+    { value: "ht", label: "Kreyòl ayisyen" },
+    { value: "he", label: "עברית" },
+    { value: "hi", label: "हिन्दी" },
+    { value: "hu", label: "Magyar" },
+    { value: "is", label: "Íslenska" },
+    { value: "id", label: "Bahasa Indonesia" },
+    { value: "it", label: "Italiano" },
     { value: "ja", label: "日本語" },
+    { value: "kn", label: "ಕನ್ನಡ" },
+    { value: "kk", label: "Қазақша" },
+    { value: "ko", label: "한국어" },
+    { value: "lv", label: "Latviešu" },
+    { value: "lt", label: "Lietuvių" },
+    { value: "mk", label: "Македонски" },
+    { value: "ms", label: "Bahasa Melayu" },
+    { value: "mt", label: "Malti" },
+    { value: "mi", label: "Māori" },
+    { value: "mr", label: "मराठी" },
+    { value: "mn", label: "Монгол" },
+    { value: "ne", label: "नेपाली" },
+    { value: "no", label: "Norsk" },
+    { value: "fa", label: "فارسی" },
+    { value: "pl", label: "Polski" },
+    { value: "pt", label: "Português" },
+    { value: "pa", label: "ਪੰਜਾਬੀ" },
+    { value: "ro", label: "Română" },
+    { value: "ru", label: "Русский" },
+    { value: "sr", label: "Српски" },
+    { value: "sk", label: "Slovenčina" },
+    { value: "sl", label: "Slovenščina" },
+    { value: "es", label: "Español" },
+    { value: "sw", label: "Kiswahili" },
+    { value: "sv", label: "Svenska" },
+    { value: "tl", label: "Filipino" },
+    { value: "ta", label: "தமிழ்" },
+    { value: "te", label: "తెలుగు" },
+    { value: "th", label: "ภาษาไทย" },
+    { value: "tr", label: "Türkçe" },
+    { value: "uk", label: "Українська" },
+    { value: "ur", label: "اردو" },
+    { value: "vi", label: "Tiếng Việt" },
+    { value: "cy", label: "Cymraeg" },
     { value: "zh", label: "中文（简体）" },
     { value: "zh-TW", label: "中文（繁體）" },
-    { value: "ko", label: "한국어" },
   ];
 }
 
@@ -54,7 +117,11 @@ interface Dropdown {
 // clicking toggles a styled menu. `onChange` fires only on user selection.
 const allDropdownClosers: Array<() => void> = [];
 
-function createDropdown(items: Array<{ value: string; label: string }>, onChange: (value: string) => void): Dropdown {
+function createDropdown(
+  items: Array<{ value: string; label: string }>,
+  onChange: (value: string) => void,
+  opts: { searchable?: boolean } = {},
+): Dropdown {
   const el = document.createElement("div");
   el.className = "select";
 
@@ -70,11 +137,31 @@ function createDropdown(items: Array<{ value: string; label: string }>, onChange
   menu.className = "select__menu";
   el.appendChild(menu);
 
+  let searchInput: HTMLInputElement | null = null;
+  if (opts.searchable) {
+    const searchWrap = document.createElement("li");
+    searchWrap.className = "select__search-wrap";
+    searchInput = document.createElement("input");
+    searchInput.type = "text";
+    searchInput.className = "select__search field__input";
+    searchInput.placeholder = "Search…";
+    searchWrap.appendChild(searchInput);
+    menu.appendChild(searchWrap);
+
+    searchInput.addEventListener("input", () => {
+      const q = searchInput!.value.toLowerCase();
+      for (const [, li] of optionEls) {
+        li.style.display = (li.textContent?.toLowerCase() ?? "").includes(q) ? "" : "none";
+      }
+    });
+    searchInput.addEventListener("click", (e) => e.stopPropagation());
+  }
+
   let current = items[0]?.value ?? "";
   let optionEls = new Map<string, HTMLLIElement>();
 
   const buildMenu = (newItems: Array<{ value: string; label: string }>) => {
-    menu.innerHTML = "";
+    for (const [, li] of optionEls) li.remove();
     optionEls = new Map();
     for (const item of newItems) {
       const li = document.createElement("li");
@@ -98,7 +185,13 @@ function createDropdown(items: Array<{ value: string; label: string }>, onChange
     for (const [val, li] of optionEls) li.classList.toggle("select__option--active", val === current);
   };
 
-  const close = () => el.classList.remove("select--open");
+  const close = () => {
+    el.classList.remove("select--open");
+    if (searchInput) {
+      searchInput.value = "";
+      for (const [, li] of optionEls) li.style.display = "";
+    }
+  };
   allDropdownClosers.push(close);
 
   buildMenu(items);
@@ -107,7 +200,10 @@ function createDropdown(items: Array<{ value: string; label: string }>, onChange
     e.stopPropagation(); // don't let the document handler immediately close it
     const isOpen = el.classList.contains("select--open");
     allDropdownClosers.forEach((c) => c());
-    if (!isOpen) el.classList.add("select--open");
+    if (!isOpen) {
+      el.classList.add("select--open");
+      if (searchInput) requestAnimationFrame(() => searchInput!.focus());
+    }
   });
   // Close when clicking/tapping anywhere outside this control.
   document.addEventListener("click", (e) => {
@@ -292,7 +388,7 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
 
   const settingsModal = document.querySelector<HTMLDivElement>("[data-settings-modal]")!;
   const apiKeyInput = settingsModal.querySelector<HTMLInputElement>("[data-api-key]")!;
-  const languageSelect = createDropdown(speechLanguages(), () => {});
+  const languageSelect = createDropdown(speechLanguages(), () => {}, { searchable: true });
   // Preview the theme live as the user picks (reverted on Cancel via closeSettings).
   const themeSelect = createDropdown(themes(), (value) => applyTheme(value));
   settingsModal.querySelector<HTMLDivElement>("[data-language]")!.appendChild(languageSelect.el);
