@@ -95,7 +95,10 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
       new CreateStartUpPageContainer({ containerTotalNum: 1, textObject: [main] }),
     );
   }
-  if (result !== 0) throw new Error(`createStartUpPageContainer failed: ${result}`);
+  // result 1 often means the container already exists (e.g. after a hot-reload).
+  // Treat it as a warning rather than a fatal error — textContainerUpgrade calls
+  // will fail gracefully if the container is truly gone.
+  if (result !== 0) console.warn(`createStartUpPageContainer returned ${result} — continuing`);
 
   // The most recent live state, so a scroll event (which carries no text) can render
   // off it, and so `followLive` can redraw the live view.

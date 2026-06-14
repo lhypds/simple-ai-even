@@ -27,6 +27,7 @@ async function main() {
   let generating = false;
   let listening = false;
   let transcriptionEnabled = true;
+  let segmenterReady = false;
 
   // Set to true on reset so that stale in-flight chunks from the previous
   // generation are discarded until the server's :reset reply arrives.
@@ -74,6 +75,19 @@ async function main() {
       listening = false;
       setStatus("");
       return;
+    }
+
+    if (!segmenterReady) {
+      setStatus("● loading VAD…");
+      try {
+        await segmenter.init();
+        segmenterReady = true;
+      } catch (err) {
+        console.error("Segmenter init failed:", err);
+        setStatus("⚠ VAD init failed");
+        return;
+      }
+      if (!transcriptionEnabled) return; // disabled while loading
     }
 
     const isMicReady = await bridge.audioControl(true);
@@ -187,58 +201,6 @@ async function main() {
     void sc.send(":reset");
   }
 
-  ui = await createWebUI(bridge, {
-    onSubmit: (text) => ask(text),
-    onRefresh: () => reset(),
-    onInput: (text) => {
-      draft = text;
-      if (text) display.followLive();
-      // Typing takes over from the mic: stop listening on the first keystroke so a
-      // typed message isn't competing with captured speech. Resume when cleared.
-      if (text && listening) void stopListening();
-      else if (!text && !listening && !generating) void startListening();
-      renderAll();
-    },
-    // Manual login (button) goes through immediately — the CLI is already idle by
-    // then. Startup auto-login fires before the CLI is ready, so it's queued and
-    // sent on the first onReady above.
-    onLogin: (username, password) => {
-      if (scReady) {
-        echoLogin(username, password);
-        void sc.login(username, password);
-      } else {
-        pendingLogin = { username, password };
-      }
-    },
-    onRegister: (username, email, password) => {
-      echoRegister(username, email, password);
-      void sc.send(`:user add ${username} ${email} ${password}`);
-    },
-    onLanguageChange: (language) => {
-      sttLanguage = language;
-    },
-    onApiKeyChange: (apiKey) => {
-      setApiKey(apiKey);
-      // Voice transcription needs the OpenAI key: start listening when one is
-      // present (also on startup, with the saved key), stop when it's missing.
-      if (apiKey) void startListening();
-      else void stopListening();
-    },
-    onCursorBlinkChange: (blink) => {
-      display.setCursorBlink(blink);
-    },
-    onTranscriptionChange: (enabled) => {
-      transcriptionEnabled = enabled;
-      if (enabled) void startListening();
-      else void stopListening();
-    },
-  });
-
-  if (!hasApiKey()) {
-    setStatus("");
-    ui?.toast(msg("noApiKey"), 5000);
-  }
-
   // Accumulate transcribed segments and submit them together once all in-flight
   // transcriptions for a single utterance are done.
   let nextSeq = 0;
@@ -308,6 +270,58 @@ async function main() {
 
     pendingCount--;
     trySubmit();
+  }
+
+  ui = await createWebUI(bridge, {
+    onSubmit: (text) => ask(text),
+    onRefresh: () => reset(),
+    onInput: (text) => {
+      draft = text;
+      if (text) display.followLive();
+      // Typing takes over from the mic: stop listening on the first keystroke so a
+      // typed message isn't competing with captured speech. Resume when cleared.
+      if (text && listening) void stopListening();
+      else if (!text && !listening && !generating) void startListening();
+      renderAll();
+    },
+    // Manual login (button) goes through immediately — the CLI is already idle by
+    // then. Startup auto-login fires before the CLI is ready, so it's queued and
+    // sent on the first onReady above.
+    onLogin: (username, password) => {
+      if (scReady) {
+        echoLogin(username, password);
+        void sc.login(username, password);
+      } else {
+        pendingLogin = { username, password };
+      }
+    },
+    onRegister: (username, email, password) => {
+      echoRegister(username, email, password);
+      void sc.send(`:user add ${username} ${email} ${password}`);
+    },
+    onLanguageChange: (language) => {
+      sttLanguage = language;
+    },
+    onApiKeyChange: (apiKey) => {
+      setApiKey(apiKey);
+      // Voice transcription needs the OpenAI key: start listening when one is
+      // present (also on startup, with the saved key), stop when it's missing.
+      if (apiKey) void startListening();
+      else void stopListening();
+    },
+    onCursorBlinkChange: (blink) => {
+      display.setCursorBlink(blink);
+    },
+    onTranscriptionChange: (enabled) => {
+      transcriptionEnabled = enabled;
+      if (enabled) void startListening();
+      else void stopListening();
+    },
+  });
+
+  if (!hasApiKey()) {
+    setStatus("");
+    ui?.toast(msg("noApiKey"), 5000);
   }
 
   // Even app bridge events

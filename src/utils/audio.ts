@@ -3,67 +3,33 @@
 const BYTES_PER_SAMPLE = 2; // 16-bit
 const NUM_CHANNELS = 1; // mono
 
-// Root-mean-square amplitude of a PCM buffer (on the 0..32767 scale).
-export function rms(bytes: Uint8Array): number {
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const count = Math.floor(bytes.byteLength / BYTES_PER_SAMPLE);
-  if (count === 0) return 0;
-  let sumSquares = 0;
+// Convert 16-bit LE PCM to normalized Float32 in [-1, 1].
+export function int16ToFloat32(buf: Uint8Array): Float32Array {
+  const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  const count = Math.floor(buf.byteLength / BYTES_PER_SAMPLE);
+  const out = new Float32Array(count);
   for (let i = 0; i < count; i++) {
-    const sample = view.getInt16(i * BYTES_PER_SAMPLE, true);
-    sumSquares += sample * sample;
-  }
-  return Math.sqrt(sumSquares / count);
-}
-
-// How often the signal crosses zero, expressed as crossings per second.
-// Speech sits in a characteristic ZCR band; very low ZCR = impulse noise,
-// very high ZCR = white noise / interference.
-function zeroCrossingRate(bytes: Uint8Array, sampleRate: number): number {
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const count = Math.floor(bytes.byteLength / BYTES_PER_SAMPLE);
-  if (count < 2) return 0;
-  let crossings = 0;
-  let prev = view.getInt16(0, true);
-  for (let i = 1; i < count; i++) {
-    const curr = view.getInt16(i * BYTES_PER_SAMPLE, true);
-    if ((prev >= 0) !== (curr >= 0)) crossings++;
-    prev = curr;
-  }
-  return (crossings / count) * sampleRate;
-}
-
-// Minimum RMS to consider the buffer potentially containing speech.
-// Ambient noise on the 0–32767 scale is typically <200; whispered speech >400.
-const SPEECH_RMS_MIN = 300;
-
-// ZCR band for speech (crossings/second).
-// Voiced speech: ~100–500/s. Below → DC/impulse noise. Above → white noise.
-const SPEECH_ZCR_MIN = 50;
-const SPEECH_ZCR_MAX = 3000;
-
-// Returns true when the buffer is likely to contain speech.
-// Combines energy (RMS) and zero-crossing rate to filter out silence,
-// impulse noise, and white noise/interference — all without an ML model.
-export function hasSpeech(bytes: Uint8Array, sampleRate: number): boolean {
-  if (rms(bytes) < SPEECH_RMS_MIN) return false;
-  const zcr = zeroCrossingRate(bytes, sampleRate);
-  return zcr >= SPEECH_ZCR_MIN && zcr <= SPEECH_ZCR_MAX;
-}
-
-// Concatenate PCM chunks into a single buffer of the given total length.
-export function concatBytes(chunks: Uint8Array[], total: number): Uint8Array {
-  const out = new Uint8Array(total);
-  let offset = 0;
-  for (const c of chunks) {
-    out.set(c, offset);
-    offset += c.byteLength;
+    out[i] = view.getInt16(i * BYTES_PER_SAMPLE, true) / 32768;
   }
   return out;
 }
 
-// Wrap raw 16-bit little-endian mono PCM (as delivered by the glasses mic) in a
-// minimal WAV container so it can be POSTed to a REST transcription endpoint.
+// Convert normalized Float32 [-1, 1] back to 16-bit LE PCM.
+export function float32ToInt16(f32: Float32Array): Uint8Array {
+  const out = new Uint8Array(f32.length * BYTES_PER_SAMPLE);
+  const view = new DataView(out.buffer);
+  for (let i = 0; i < f32.length; i++) {
+    view.setInt16(
+      i * BYTES_PER_SAMPLE,
+      Math.max(-32768, Math.min(32767, Math.round(f32[i] * 32768))),
+      true,
+    );
+  }
+  return out;
+}
+
+// Wrap raw 16-bit LE mono PCM in a minimal WAV container so it can be POSTed
+// to a REST transcription endpoint.
 export function pcm16ToWav(pcm: Uint8Array, sampleRate: number): Blob {
   const blockAlign = NUM_CHANNELS * BYTES_PER_SAMPLE;
   const byteRate = sampleRate * blockAlign;
@@ -75,16 +41,16 @@ export function pcm16ToWav(pcm: Uint8Array, sampleRate: number): Blob {
   };
 
   writeStr(0, "RIFF");
-  view.setUint32(4, 36 + pcm.byteLength, true); // file size - 8
+  view.setUint32(4, 36 + pcm.byteLength, true);
   writeStr(8, "WAVE");
   writeStr(12, "fmt ");
-  view.setUint32(16, 16, true); // fmt chunk size
+  view.setUint32(16, 16, true);
   view.setUint16(20, 1, true); // PCM format
   view.setUint16(22, NUM_CHANNELS, true);
   view.setUint32(24, sampleRate, true);
   view.setUint32(28, byteRate, true);
   view.setUint16(32, blockAlign, true);
-  view.setUint16(34, BYTES_PER_SAMPLE * 8, true); // bits per sample
+  view.setUint16(34, BYTES_PER_SAMPLE * 8, true);
   writeStr(36, "data");
   view.setUint32(40, pcm.byteLength, true);
 

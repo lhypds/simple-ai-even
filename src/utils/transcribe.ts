@@ -4,7 +4,8 @@
 // endpoint. This is request/response (not a live socket), so expect a short lag
 // after each pause while the segment is transcribed.
 
-import { pcm16ToWav, hasSpeech } from "./audio";
+import { pcm16ToWav } from "./audio";
+import { hasSpeech } from "./speech";
 
 const ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 

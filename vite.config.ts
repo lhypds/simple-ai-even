@@ -154,11 +154,21 @@ export default defineConfig({
   base: "./",
   // Expose the app version to the client code as a compile-time constant.
   define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
+  optimizeDeps: { exclude: ["onnxruntime-web"] },
   // The packaged app runs in the device's (older) WebKit, not the modern
   // simulator. Target an older Safari so the build keeps/adds vendor prefixes
   // like -webkit-appearance — without this the minifier drops them and controls
   // (e.g. the input vs. enter button) render at native sizes on-device only.
   build: { cssTarget: "safari13", target: "safari13" },
-  server: { host: "0.0.0.0" },
+  server: {
+    host: "0.0.0.0",
+    // SharedArrayBuffer (needed by onnxruntime-web's threaded WASM) requires
+    // these cross-origin isolation headers. Without them, numThreads=1 still
+    // fails to load the WASM binary.
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp",
+    },
+  },
   plugins: [scBridge()],
 });
