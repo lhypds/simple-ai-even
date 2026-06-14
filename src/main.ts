@@ -310,6 +310,54 @@ async function main() {
     trySubmit();
   }
 
+  // Even app bridge events
+  bridge.onEvenHubEvent((event) => {
+    const eventType = event.textEvent?.eventType ?? event.listEvent?.eventType ?? event.sysEvent?.eventType;
+
+    // Scroll top
+    if (eventType === OsEventTypeList.SCROLL_TOP_EVENT) {
+      void display.showPreviousView();
+      return;
+    }
+
+    // Scroll bottom
+    if (eventType === OsEventTypeList.SCROLL_BOTTOM_EVENT) {
+      void display.showNextView();
+      return;
+    }
+
+    // Single-tap
+    // Arrives as a sysEvent with only an `eventSource` and no `eventType`
+    // — the host doesn't emit CLICK_EVENT for it. Treat as a tap: reset the conversation.
+    const eventSource = event.sysEvent?.eventSource;
+    if (eventType == null && eventSource != null && eventSource !== EventSourceType.TOUCH_EVENT_FORM_DUMMY_NULL) {
+      reset();
+      return;
+    }
+
+    // Double-tap
+    // Asks the host to raise its exit confirmation dialog; actual teardown
+    // happens when SYSTEM_EXIT_EVENT fires below.
+    if (eventType === OsEventTypeList.DOUBLE_CLICK_EVENT) {
+      void requestExit();
+      return;
+    }
+
+    // System exit
+    if (eventType === OsEventTypeList.SYSTEM_EXIT_EVENT || eventType === OsEventTypeList.ABNORMAL_EXIT_EVENT) {
+      void shutdown();
+      return;
+    }
+
+    // Audio PCM (Pulse-Code Modulation)
+    const pcm = event.audioEvent?.audioPcm;
+    if (pcm && pcm.byteLength > 0) {
+      if (!listening) return;
+      segmenter.push(pcm);
+    }
+  });
+
+  // Exit
   async function requestExit() {
     await bridge.shutDownPageContainer(1); // 1 = show the "exit?" interaction layer
   }
@@ -318,38 +366,6 @@ async function main() {
     await stopListening();
     await bridge.shutDownPageContainer(0); // 0 = exit immediately (post-confirmation cleanup)
   }
-
-  bridge.onEvenHubEvent((event) => {
-    const eventType = event.textEvent?.eventType ?? event.listEvent?.eventType ?? event.sysEvent?.eventType;
-    if (eventType === OsEventTypeList.SCROLL_TOP_EVENT) {
-      void display.showPreviousView();
-      return;
-    }
-    if (eventType === OsEventTypeList.SCROLL_BOTTOM_EVENT) {
-      void display.showNextView();
-      return;
-    }
-    // Single-tap arrives as a sysEvent with only an `eventSource` and no `eventType`
-    // — the host doesn't emit CLICK_EVENT for it. Treat as a tap: reset the conversation.
-    const eventSource = event.sysEvent?.eventSource;
-    if (eventType == null && eventSource != null && eventSource !== EventSourceType.TOUCH_EVENT_FORM_DUMMY_NULL) {
-      reset();
-      return;
-    }
-    // Double-tap asks the host to raise its exit confirmation dialog; actual teardown
-    // happens when SYSTEM_EXIT_EVENT fires below.
-    if (eventType === OsEventTypeList.DOUBLE_CLICK_EVENT) {
-      void requestExit();
-      return;
-    }
-    if (eventType === OsEventTypeList.SYSTEM_EXIT_EVENT || eventType === OsEventTypeList.ABNORMAL_EXIT_EVENT) {
-      void shutdown();
-      return;
-    }
-    if (!listening) return;
-    const pcm = event.audioEvent?.audioPcm;
-    if (pcm && pcm.byteLength > 0) segmenter.push(pcm);
-  });
 }
 
 main().catch(console.error);
