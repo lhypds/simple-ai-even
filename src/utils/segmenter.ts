@@ -8,7 +8,7 @@
 
 import { FrameProcessor } from "@ricky0123/vad-web/dist/frame-processor";
 import { Message } from "@ricky0123/vad-web/dist/messages";
-import { SileroLegacy } from "@ricky0123/vad-web/dist/models";
+import { SileroV5 } from "@ricky0123/vad-web/dist/models";
 import { defaultModelFetcher } from "@ricky0123/vad-web/dist/default-model-fetcher";
 import * as ort from "onnxruntime-web/wasm";
 import { int16ToFloat32, float32ToInt16 } from "./audio";
@@ -63,8 +63,8 @@ export class SpeechSegmenter {
     ort.env.wasm.wasmPaths = "./";
 
     const msPerFrame = (FRAME_SAMPLES / this.opts.sampleRate) * 1000;
-    const model = await SileroLegacy.new(ort, () =>
-      defaultModelFetcher("silero_vad_legacy.onnx"),
+    const model = await SileroV5.new(ort, () =>
+      defaultModelFetcher("silero_vad_v5.onnx"),
     );
 
     this.processor = new FrameProcessor(

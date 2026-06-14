@@ -10,7 +10,7 @@ const dest = join(root, "public");
 if (!existsSync(dest)) mkdirSync(dest, { recursive: true });
 
 const files = [
-  [join(nm, "@ricky0123/vad-web/dist/silero_vad_legacy.onnx"), "silero_vad_legacy.onnx"],
+  [join(nm, "@ricky0123/vad-web/dist/silero_vad_v5.onnx"), "silero_vad_v5.onnx"],
   [join(nm, "onnxruntime-web/dist/ort-wasm-simd-threaded.wasm"), "ort-wasm-simd-threaded.wasm"],
   [join(nm, "onnxruntime-web/dist/ort-wasm-simd-threaded.mjs"), "ort-wasm-simd-threaded.mjs"],
 ];
