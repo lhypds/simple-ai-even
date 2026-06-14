@@ -10,222 +10,11 @@
 
 import "./styles.css";
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
-import { loadSettings, saveSettings } from "../utils/settingUtils";
+import { loadSettings } from "../utils/settingUtils";
 import { GEAR_SVG, USER_SVG, REFRESH_SVG } from "../assets/icons";
 import { t, setLocale, parseLocale } from "../i18n";
-
-// App version, injected at build time from app.json (see vite.config.ts `define`).
-declare const __APP_VERSION__: string;
-
-function speechLanguages() {
-  return [
-    { value: "", label: t("langAuto") },
-    { value: "af", label: "Afrikaans" },
-    { value: "sq", label: "Shqip" },
-    { value: "ar", label: "العربية" },
-    { value: "hy", label: "Հայերեն" },
-    { value: "az", label: "Azərbaycanca" },
-    { value: "eu", label: "Euskara" },
-    { value: "be", label: "Беларуская" },
-    { value: "bn", label: "বাংলা" },
-    { value: "bs", label: "Bosanski" },
-    { value: "bg", label: "Български" },
-    { value: "ca", label: "Català" },
-    { value: "hr", label: "Hrvatski" },
-    { value: "cs", label: "Čeština" },
-    { value: "da", label: "Dansk" },
-    { value: "nl", label: "Nederlands" },
-    { value: "en", label: "English" },
-    { value: "et", label: "Eesti" },
-    { value: "fi", label: "Suomi" },
-    { value: "fr", label: "Français" },
-    { value: "gl", label: "Galego" },
-    { value: "ka", label: "ქართული" },
-    { value: "de", label: "Deutsch" },
-    { value: "el", label: "Ελληνικά" },
-    { value: "gu", label: "ગુજરાતી" },
-    { value: "ht", label: "Kreyòl ayisyen" },
-    { value: "he", label: "עברית" },
-    { value: "hi", label: "हिन्दी" },
-    { value: "hu", label: "Magyar" },
-    { value: "is", label: "Íslenska" },
-    { value: "id", label: "Bahasa Indonesia" },
-    { value: "it", label: "Italiano" },
-    { value: "ja", label: "日本語" },
-    { value: "kn", label: "ಕನ್ನಡ" },
-    { value: "kk", label: "Қазақша" },
-    { value: "ko", label: "한국어" },
-    { value: "lv", label: "Latviešu" },
-    { value: "lt", label: "Lietuvių" },
-    { value: "mk", label: "Македонски" },
-    { value: "ms", label: "Bahasa Melayu" },
-    { value: "mt", label: "Malti" },
-    { value: "mi", label: "Māori" },
-    { value: "mr", label: "मराठी" },
-    { value: "mn", label: "Монгол" },
-    { value: "ne", label: "नेपाली" },
-    { value: "no", label: "Norsk" },
-    { value: "fa", label: "فارسی" },
-    { value: "pl", label: "Polski" },
-    { value: "pt", label: "Português" },
-    { value: "pa", label: "ਪੰਜਾਬੀ" },
-    { value: "ro", label: "Română" },
-    { value: "ru", label: "Русский" },
-    { value: "sr", label: "Српски" },
-    { value: "sk", label: "Slovenčina" },
-    { value: "sl", label: "Slovenščina" },
-    { value: "es", label: "Español" },
-    { value: "sw", label: "Kiswahili" },
-    { value: "sv", label: "Svenska" },
-    { value: "tl", label: "Filipino" },
-    { value: "ta", label: "தமிழ்" },
-    { value: "te", label: "తెలుగు" },
-    { value: "th", label: "ภาษาไทย" },
-    { value: "tr", label: "Türkçe" },
-    { value: "uk", label: "Українська" },
-    { value: "ur", label: "اردو" },
-    { value: "vi", label: "Tiếng Việt" },
-    { value: "cy", label: "Cymraeg" },
-    { value: "zh", label: "中文（简体）" },
-    { value: "zh-TW", label: "中文（繁體）" },
-  ];
-}
-
-function themes() {
-  return [
-    { value: "light", label: t("themeLight") },
-    { value: "dark", label: t("themeDark") },
-    { value: "terminal", label: t("themeTerminal") },
-  ];
-}
-
-function applyTheme(theme: string): void {
-  document.documentElement.dataset.theme = theme || "terminal";
-}
-
-interface Dropdown {
-  /** The control's root element — append this where the dropdown should appear. */
-  el: HTMLElement;
-  /** Selected option value (get/set). Setting it updates the label, no callback. */
-  value: string;
-  /** Replace all items and refresh the displayed label (for locale switches). */
-  relabel(items: Array<{ value: string; label: string }>): void;
-}
-
-// A fully app-styled dropdown to replace native <select>, whose option menu the
-// webview renders in system style (unstylable). Button shows the current label;
-// clicking toggles a styled menu. `onChange` fires only on user selection.
-const allDropdownClosers: Array<() => void> = [];
-
-function createDropdown(
-  items: Array<{ value: string; label: string }>,
-  onChange: (value: string) => void,
-  opts: { searchable?: boolean } = {},
-): Dropdown {
-  const el = document.createElement("div");
-  el.className = "select";
-
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "field__input select__button";
-  const labelEl = document.createElement("span");
-  labelEl.className = "select__label";
-  button.appendChild(labelEl);
-  el.appendChild(button);
-
-  const menu = document.createElement("ul");
-  menu.className = "select__menu";
-  el.appendChild(menu);
-
-  let searchInput: HTMLInputElement | null = null;
-  if (opts.searchable) {
-    const searchWrap = document.createElement("li");
-    searchWrap.className = "select__search-wrap";
-    searchInput = document.createElement("input");
-    searchInput.type = "text";
-    searchInput.className = "select__search field__input";
-    searchInput.placeholder = "Search…";
-    searchWrap.appendChild(searchInput);
-    menu.appendChild(searchWrap);
-
-    searchInput.addEventListener("input", () => {
-      const q = searchInput!.value.toLowerCase();
-      for (const [, li] of optionEls) {
-        li.style.display = (li.textContent?.toLowerCase() ?? "").includes(q) ? "" : "none";
-      }
-    });
-    searchInput.addEventListener("click", (e) => e.stopPropagation());
-  }
-
-  let current = items[0]?.value ?? "";
-  let optionEls = new Map<string, HTMLLIElement>();
-
-  const buildMenu = (newItems: Array<{ value: string; label: string }>) => {
-    for (const [, li] of optionEls) li.remove();
-    optionEls = new Map();
-    for (const item of newItems) {
-      const li = document.createElement("li");
-      li.className = "select__option";
-      li.textContent = item.label;
-      li.addEventListener("click", () => {
-        setValue(item.value, newItems);
-        close();
-        onChange(item.value);
-      });
-      menu.appendChild(li);
-      optionEls.set(item.value, li);
-    }
-  };
-
-  const setValue = (v: string, src: Array<{ value: string; label: string }> = []) => {
-    const pool = src.length ? src : [...optionEls.keys()].map((k) => ({ value: k, label: optionEls.get(k)!.textContent ?? "" }));
-    const item = pool.find((i) => i.value === v) ?? pool[0];
-    current = item?.value ?? "";
-    labelEl.textContent = item?.label ?? "";
-    for (const [val, li] of optionEls) li.classList.toggle("select__option--active", val === current);
-  };
-
-  const close = () => {
-    el.classList.remove("select--open");
-    if (searchInput) {
-      searchInput.value = "";
-      for (const [, li] of optionEls) li.style.display = "";
-    }
-  };
-  allDropdownClosers.push(close);
-
-  buildMenu(items);
-
-  button.addEventListener("click", (e) => {
-    e.stopPropagation(); // don't let the document handler immediately close it
-    const isOpen = el.classList.contains("select--open");
-    allDropdownClosers.forEach((c) => c());
-    if (!isOpen) {
-      el.classList.add("select--open");
-      if (searchInput) requestAnimationFrame(() => searchInput!.focus());
-    }
-  });
-  // Close when clicking/tapping anywhere outside this control.
-  document.addEventListener("click", (e) => {
-    if (!el.contains(e.target as Node)) close();
-  });
-
-  setValue(current, items);
-
-  return {
-    el,
-    get value() {
-      return current;
-    },
-    set value(v: string) {
-      setValue(v);
-    },
-    relabel(newItems) {
-      buildMenu(newItems);
-      setValue(current, newItems);
-    },
-  };
-}
+import { userModalHTML, createUserModal } from "./user";
+import { settingsModalHTML, createSettingsModal, applyTheme } from "./settings";
 
 export interface WebUI {
   setStatus(text: string): void;
@@ -265,7 +54,7 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   if (!root) throw new Error("#app element not found");
 
   // Load settings and apply locale before building the HTML so t() is ready.
-  let settings = await loadSettings(bridge);
+  const settingsRef = { current: await loadSettings(bridge) };
   setLocale(parseLocale(""));
 
   root.innerHTML = `
@@ -288,85 +77,8 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
 
     <div class="toast" data-toast></div>
 
-    <div class="modal" data-login-modal>
-      <div class="modal__box">
-        <h2 class="modal__title" data-i18n-modal-title>${t("loginTitle")}</h2>
-
-        <div class="modal__view" data-login-view>
-          <label class="field">
-            <span class="field__label" data-i18n-username>${t("fieldUsername")}</span>
-            <input class="field__input" data-username type="text" autocomplete="username" />
-          </label>
-          <label class="field">
-            <span class="field__label" data-i18n-password>${t("fieldPassword")}</span>
-            <input class="field__input" data-password type="password" autocomplete="current-password" />
-          </label>
-          <label class="checkbox">
-            <input type="checkbox" data-login-save />
-            <span data-i18n-save-creds>${t("saveCredentials")}</span>
-          </label>
-          <div class="modal__actions">
-            <button class="btn-link" data-show-register data-i18n-register-btn>${t("btnRegister")}</button>
-            <button class="btn" data-close-login data-i18n-cancel>${t("btnCancel")}</button>
-            <button class="btn btn--primary" data-do-login data-i18n-login-btn>${t("btnLogin")}</button>
-          </div>
-        </div>
-
-        <div class="modal__view" data-register-view style="display:none">
-          <label class="field">
-            <span class="field__label" data-i18n-email>${t("fieldEmail")}</span>
-            <input class="field__input" data-reg-email type="email" autocomplete="email" />
-          </label>
-          <label class="field">
-            <span class="field__label" data-i18n-reg-username>${t("fieldUsername")}</span>
-            <input class="field__input" data-reg-username type="text" autocomplete="username" />
-          </label>
-          <label class="field">
-            <span class="field__label" data-i18n-reg-password>${t("fieldPassword")}</span>
-            <input class="field__input" data-reg-password type="password" autocomplete="new-password" />
-          </label>
-          <div class="modal__actions">
-            <button class="btn" data-show-login data-i18n-cancel>${t("btnCancel")}</button>
-            <button class="btn btn--primary" data-do-register data-i18n-register-btn>${t("btnRegister")}</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal" data-settings-modal>
-      <div class="modal__box">
-        <h2 class="modal__title" data-i18n-settings-title>${t("settingsTitle")}</h2>
-        <label class="field">
-          <span class="field__label" data-i18n-api-key>${t("fieldApiKey")}</span>
-          <input class="field__input" data-api-key type="password"
-                 placeholder="sk-" autocomplete="off" />
-        </label>
-        <label class="switch">
-          <span data-i18n-transcription>${t("toggleTranscription")}</span>
-          <input type="checkbox" data-transcription />
-          <span class="switch__track"><span class="switch__thumb"></span></span>
-        </label>
-        <div class="field" data-speech-lang-field>
-          <span class="field__label" data-i18n-speech-lang>${t("fieldSpeechLang")}</span>
-          <div data-language></div>
-        </div>
-        <div class="field">
-          <span class="field__label" data-i18n-theme>${t("fieldTheme")}</span>
-          <div data-theme></div>
-        </div>
-        <label class="switch">
-          <span data-i18n-cursor-blink>${t("toggleCursorBlink")}</span>
-          <input type="checkbox" data-cursor-blink />
-          <span class="switch__track"><span class="switch__thumb"></span></span>
-        </label>
-        <div class="modal__actions">
-          <span class="modal__saved" data-saved data-i18n-saved>${t("savedNote")}</span>
-          <button class="btn" data-close-settings data-i18n-cancel-settings>${t("btnCancel")}</button>
-          <button class="btn btn--primary" data-save data-i18n-save>${t("btnSave")}</button>
-        </div>
-        <div class="modal__version" data-i18n-version>${t("versionPrefix")} ${__APP_VERSION__}</div>
-      </div>
-    </div>
+    ${userModalHTML()}
+    ${settingsModalHTML()}
   `;
 
   const statusEl = root.querySelector<HTMLSpanElement>("[data-status]")!;
@@ -375,70 +87,32 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   const toastEl = root.querySelector<HTMLDivElement>("[data-toast]")!;
   let toastTimer = 0; // pending hide timer, so back-to-back toasts don't hide early
 
-  const loginModal = document.querySelector<HTMLDivElement>("[data-login-modal]")!;
-  const usernameInput = loginModal.querySelector<HTMLInputElement>("[data-username]")!;
-  const passwordInput = loginModal.querySelector<HTMLInputElement>("[data-password]")!;
-  const loginSaveCheckbox = loginModal.querySelector<HTMLInputElement>("[data-login-save]")!;
-  const loginView = loginModal.querySelector<HTMLDivElement>("[data-login-view]")!;
-  const registerView = loginModal.querySelector<HTMLDivElement>("[data-register-view]")!;
-  const modalTitle = loginModal.querySelector<HTMLHeadingElement>("[data-i18n-modal-title]")!;
-  const regEmailInput = loginModal.querySelector<HTMLInputElement>("[data-reg-email]")!;
-  const regUsernameInput = loginModal.querySelector<HTMLInputElement>("[data-reg-username]")!;
-  const regPasswordInput = loginModal.querySelector<HTMLInputElement>("[data-reg-password]")!;
+  const userModal = createUserModal(root, settingsRef, bridge, {
+    onLogin: options.onLogin,
+    onRegister: options.onRegister,
+  });
 
-  const settingsModal = document.querySelector<HTMLDivElement>("[data-settings-modal]")!;
-  const apiKeyInput = settingsModal.querySelector<HTMLInputElement>("[data-api-key]")!;
-  const languageSelect = createDropdown(speechLanguages(), () => {}, { searchable: true });
-  // Preview the theme live as the user picks (reverted on Cancel via closeSettings).
-  const themeSelect = createDropdown(themes(), (value) => applyTheme(value));
-  settingsModal.querySelector<HTMLDivElement>("[data-language]")!.appendChild(languageSelect.el);
-  settingsModal.querySelector<HTMLDivElement>("[data-theme]")!.appendChild(themeSelect.el);
-  const savedNote = settingsModal.querySelector<HTMLSpanElement>("[data-saved]")!;
-  const cursorBlinkCheckbox = settingsModal.querySelector<HTMLInputElement>("[data-cursor-blink]")!;
-  const transcriptionCheckbox = settingsModal.querySelector<HTMLInputElement>("[data-transcription]")!;
-  const speechLangField = settingsModal.querySelector<HTMLDivElement>("[data-speech-lang-field]")!;
+  const settingsModal = createSettingsModal(root, settingsRef, bridge, termEl, {
+    onApiKeyChange: options.onApiKeyChange,
+    onLanguageChange: options.onLanguageChange,
+    onCursorBlinkChange: options.onCursorBlinkChange,
+    onTranscriptionChange: options.onTranscriptionChange,
+    onApplyTranslations: () => {
+      userModal.applyTranslations();
+      settingsModal.applyTranslations();
+    },
+  });
 
-  const setApiKeyDependentState = (hasKey: boolean) => {
-    transcriptionCheckbox.disabled = !hasKey;
-    if (!hasKey) transcriptionCheckbox.checked = false;
-    speechLangField.classList.toggle("field--disabled", !hasKey);
-  };
-
-  // Updates all translatable text nodes after a locale switch.
-  const applyTranslations = () => {
-    loginModal.querySelector("[data-i18n-username]")!.textContent = t("fieldUsername");
-    loginModal.querySelector("[data-i18n-password]")!.textContent = t("fieldPassword");
-    loginModal.querySelector("[data-i18n-save-creds]")!.textContent = t("saveCredentials");
-    loginModal.querySelectorAll("[data-i18n-cancel]").forEach((el) => (el.textContent = t("btnCancel")));
-    loginModal.querySelector("[data-i18n-login-btn]")!.textContent = t("btnLogin");
-    loginModal.querySelectorAll("[data-i18n-register-btn]").forEach((el) => (el.textContent = t("btnRegister")));
-    loginModal.querySelector("[data-i18n-email]")!.textContent = t("fieldEmail");
-    loginModal.querySelector("[data-i18n-reg-username]")!.textContent = t("fieldUsername");
-    loginModal.querySelector("[data-i18n-reg-password]")!.textContent = t("fieldPassword");
-    settingsModal.querySelector("[data-i18n-settings-title]")!.textContent = t("settingsTitle");
-    settingsModal.querySelector("[data-i18n-api-key]")!.textContent = t("fieldApiKey");
-    settingsModal.querySelector("[data-i18n-speech-lang]")!.textContent = t("fieldSpeechLang");
-    settingsModal.querySelector("[data-i18n-theme]")!.textContent = t("fieldTheme");
-    settingsModal.querySelector("[data-i18n-cursor-blink]")!.textContent = t("toggleCursorBlink");
-    settingsModal.querySelector("[data-i18n-transcription]")!.textContent = t("toggleTranscription");
-    settingsModal.querySelector("[data-i18n-saved]")!.textContent = t("savedNote");
-    settingsModal.querySelector("[data-i18n-cancel-settings]")!.textContent = t("btnCancel");
-    settingsModal.querySelector("[data-i18n-save]")!.textContent = t("btnSave");
-    settingsModal.querySelector("[data-i18n-version]")!.textContent = `${t("versionPrefix")} ${__APP_VERSION__}`;
-    languageSelect.relabel(speechLanguages());
-    themeSelect.relabel(themes());
-  };
-
-  options.onLanguageChange(settings.language);
-  options.onApiKeyChange(settings.apiKey);
-  applyTheme(settings.theme);
-  termEl.classList.toggle("term--cursor-blink", settings.cursorBlink);
-  options.onCursorBlinkChange(settings.cursorBlink);
-  setApiKeyDependentState(!!settings.apiKey);
-  options.onTranscriptionChange(settings.transcription);
+  options.onLanguageChange(settingsRef.current.language);
+  options.onApiKeyChange(settingsRef.current.apiKey);
+  applyTheme(settingsRef.current.theme);
+  termEl.classList.toggle("term--cursor-blink", settingsRef.current.cursorBlink);
+  options.onCursorBlinkChange(settingsRef.current.cursorBlink);
+  settingsModal.setApiKeyDependentState(!!settingsRef.current.apiKey);
+  options.onTranscriptionChange(settingsRef.current.transcription);
   // Auto-login at startup if saved credentials exist.
-  if (settings.username && settings.password) {
-    options.onLogin(settings.username, settings.password);
+  if (settingsRef.current.username && settingsRef.current.password) {
+    options.onLogin(settingsRef.current.username, settingsRef.current.password);
   }
 
   // --- input line ---------------------------------------------------------
@@ -490,104 +164,7 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   root.querySelector("[data-refresh]")!.addEventListener("click", () => options.onRefresh());
 
   // --- login modal --------------------------------------------------------
-  const showLoginView = () => {
-    loginView.style.display = "";
-    registerView.style.display = "none";
-    modalTitle.textContent = t("loginTitle");
-  };
-  const showRegisterView = () => {
-    loginView.style.display = "none";
-    registerView.style.display = "";
-    modalTitle.textContent = t("registerTitle");
-  };
-
-  const openLogin = () => {
-    usernameInput.value = settings.username;
-    passwordInput.value = settings.password;
-    loginSaveCheckbox.checked = settings.loginSave;
-    showLoginView();
-    loginModal.classList.add("modal--open");
-  };
-  const closeLogin = () => loginModal.classList.remove("modal--open");
-
-  root.querySelector("[data-open-login]")!.addEventListener("click", openLogin);
-  loginModal.querySelector("[data-close-login]")!.addEventListener("click", closeLogin);
-  loginModal.querySelector("[data-show-register]")!.addEventListener("click", showRegisterView);
-  loginModal.querySelector("[data-show-login]")!.addEventListener("click", showLoginView);
-  loginModal.addEventListener("click", (e) => {
-    if (e.target === loginModal) closeLogin();
-  });
-
-  loginModal.querySelector("[data-do-login]")!.addEventListener("click", async () => {
-    const username = usernameInput.value.trim();
-    const password = passwordInput.value;
-    const save = loginSaveCheckbox.checked;
-    // Persist the credentials only when "Save" is checked; otherwise forget any
-    // previously stored ones so this is a one-session login (no auto-login next time).
-    settings = save
-      ? { ...settings, username, password, loginSave: true }
-      : { ...settings, username: "", password: "", loginSave: false };
-    await saveSettings(bridge, settings);
-    // Log in with the entered values regardless of whether we stored them.
-    if (username) options.onLogin(username, password);
-    closeLogin();
-  });
-
-  loginModal.querySelector("[data-do-register]")!.addEventListener("click", () => {
-    const username = regUsernameInput.value.trim();
-    const email = regEmailInput.value.trim();
-    const password = regPasswordInput.value;
-    if (username && email && password) options.onRegister(username, email, password);
-    regEmailInput.value = "";
-    regUsernameInput.value = "";
-    regPasswordInput.value = "";
-    closeLogin();
-  });
-
-  // --- settings modal -----------------------------------------------------
-  const openSettings = () => {
-    apiKeyInput.value = settings.apiKey;
-    languageSelect.value = settings.language;
-    themeSelect.value = settings.theme;
-    cursorBlinkCheckbox.checked = settings.cursorBlink;
-    transcriptionCheckbox.checked = settings.transcription;
-    setApiKeyDependentState(!!settings.apiKey);
-    savedNote.classList.remove("modal__saved--show");
-    settingsModal.classList.add("modal--open");
-  };
-  apiKeyInput.addEventListener("input", () => {
-    setApiKeyDependentState(!!apiKeyInput.value.trim());
-  });
-  const closeSettings = () => {
-    applyTheme(settings.theme); // discard any unsaved live preview
-    settingsModal.classList.remove("modal--open");
-  };
-
-  root.querySelector("[data-open-settings]")!.addEventListener("click", openSettings);
-  settingsModal.querySelector("[data-close-settings]")!.addEventListener("click", closeSettings);
-  settingsModal.addEventListener("click", (e) => {
-    if (e.target === settingsModal) closeSettings();
-  });
-
-  settingsModal.querySelector("[data-save]")!.addEventListener("click", async () => {
-    const apiKey = apiKeyInput.value.trim();
-    const language = languageSelect.value;
-    const theme = themeSelect.value;
-    const cursorBlink = cursorBlinkCheckbox.checked;
-    const transcription = transcriptionCheckbox.checked;
-    settings = { ...settings, apiKey, language, theme, cursorBlink, transcription };
-    await saveSettings(bridge, settings);
-    options.onApiKeyChange(apiKey);
-    options.onLanguageChange(language);
-    applyTheme(theme);
-    termEl.classList.toggle("term--cursor-blink", cursorBlink);
-    options.onCursorBlinkChange(cursorBlink);
-    setApiKeyDependentState(!!apiKey);
-    options.onTranscriptionChange(transcription);
-    applyTranslations();
-    savedNote.classList.add("modal__saved--show");
-    setTimeout(closeSettings, 600);
-  });
+  root.querySelector("[data-open-login]")!.addEventListener("click", () => userModal.open());
 
   return {
     setStatus(text: string) {
