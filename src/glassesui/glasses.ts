@@ -82,9 +82,19 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
     isEventCapture: 1,
   });
 
-  const result = await bridge.createStartUpPageContainer(
+  // The simulator sometimes returns non-zero on the first call due to a timing
+  // race before the bridge is fully ready. Retry a few times before giving up.
+  const RETRY_DELAYS_MS = [200, 500, 1000];
+  let result = await bridge.createStartUpPageContainer(
     new CreateStartUpPageContainer({ containerTotalNum: 1, textObject: [main] }),
   );
+  for (const delay of RETRY_DELAYS_MS) {
+    if (result === 0) break;
+    await new Promise((r) => setTimeout(r, delay));
+    result = await bridge.createStartUpPageContainer(
+      new CreateStartUpPageContainer({ containerTotalNum: 1, textObject: [main] }),
+    );
+  }
   if (result !== 0) throw new Error(`createStartUpPageContainer failed: ${result}`);
 
   // The most recent live state, so a scroll event (which carries no text) can render
