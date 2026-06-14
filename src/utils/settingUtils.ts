@@ -64,7 +64,12 @@ export async function loadSettings(bridge: EvenAppBridge): Promise<Settings> {
   try {
     raw = await withTimeout(bridge.getLocalStorage(KEY), STORAGE_TIMEOUT_MS);
   } catch {
-    // bridge unavailable / errored / timed out — fall back to web localStorage.
+    // bridge unavailable / errored / timed out
+  }
+  if (!raw) {
+    // Also check web localStorage: the bridge may resolve without error on the
+    // simulator but not actually persist anything, so we always mirror writes
+    // there (see saveSettings).
     try {
       raw = window.localStorage.getItem(KEY) ?? "";
     } catch {
@@ -94,10 +99,14 @@ export async function saveSettings(bridge: EvenAppBridge, settings: Settings): P
   try {
     await withTimeout(bridge.setLocalStorage(KEY, raw), STORAGE_TIMEOUT_MS);
   } catch {
-    try {
-      window.localStorage.setItem(KEY, raw);
-    } catch {
-      /* ignore — nothing else we can do to persist */
-    }
+    // bridge unavailable / errored / timed out
+  }
+  // Always mirror to web localStorage: the bridge may resolve without error on
+  // the simulator but not actually persist, so we need a reliable fallback that
+  // loadSettings can read back.
+  try {
+    window.localStorage.setItem(KEY, raw);
+  } catch {
+    /* ignore — nothing else we can do to persist */
   }
 }
