@@ -37,7 +37,7 @@ function themes() {
 }
 
 function applyTheme(theme: string): void {
-  document.documentElement.dataset.theme = theme || "light";
+  document.documentElement.dataset.theme = theme || "terminal";
 }
 
 interface Dropdown {
