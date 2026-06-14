@@ -219,6 +219,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .modal__title {
