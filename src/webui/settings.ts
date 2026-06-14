@@ -1,6 +1,6 @@
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
-import type { Settings } from "../utils/settingUtils";
-import { saveSettings } from "../utils/settingUtils";
+import type { Settings } from "../utils/setting";
+import { saveSettings } from "../utils/setting";
 import { t, setLocale, localeFromLangCode, getLanguages } from "../i18n";
 
 declare const __APP_VERSION__: string;

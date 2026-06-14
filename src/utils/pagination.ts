@@ -1,4 +1,4 @@
-import { displayWidth, charIndexForWidth } from "./textUtils";
+import { displayWidth, charIndexForWidth } from "./text";
 
 // Group the lines of `text` into screenfuls, each holding at most `maxRows` visual rows.
 // Pages are returned oldest-first. Long lines that would leave a page half-empty are

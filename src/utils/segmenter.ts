@@ -5,7 +5,7 @@
 // half); instead we accumulate audio while the user is talking and flush a segment
 // when they pause (a run of low-energy audio) or when a segment grows too long.
 
-import { rms, concatBytes } from "./audioUtils";
+import { rms, concatBytes } from "./audio";
 
 export interface SegmenterOptions {
   sampleRate: number;

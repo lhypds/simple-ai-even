@@ -10,7 +10,7 @@
 
 import "./styles.css";
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
-import { loadSettings } from "../utils/settingUtils";
+import { loadSettings } from "../utils/setting";
 import { GEAR_SVG, USER_SVG, REFRESH_SVG } from "../assets/icons";
 import { t, setLocale, localeFromLangCode } from "../i18n";
 import { userModalHTML, createUserModal } from "./user";

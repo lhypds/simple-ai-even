@@ -1,6 +1,6 @@
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
-import type { Settings } from "../utils/settingUtils";
-import { saveSettings } from "../utils/settingUtils";
+import type { Settings } from "../utils/setting";
+import { saveSettings } from "../utils/setting";
 import { t } from "../i18n";
 
 export function userModalHTML(): string {

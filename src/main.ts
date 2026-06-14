@@ -1,10 +1,10 @@
 import { waitForEvenAppBridge, OsEventTypeList, EventSourceType } from "@evenrealities/even_hub_sdk";
 import { createDisplay } from "./glassesui/glasses";
 import { createWebUI, type WebUI } from "./webui/webui";
-import { connectSc } from "./services/scService";
-import { SpeechSegmenter } from "./utils/speechUtils";
-import { hasApiKey, setApiKey, transcribe } from "./utils/transcribeUtils";
-import { trailingPrompt, stripTrailingPrompt } from "./utils/textUtils";
+import { connectSc } from "./services/sc";
+import { SpeechSegmenter } from "./utils/segmenter";
+import { hasApiKey, setApiKey, transcribe } from "./utils/transcribe";
+import { trailingPrompt, stripTrailingPrompt } from "./utils/text";
 import { msg } from "./i18n";
 
 // The glasses mic streams single-channel 16 kHz / 16-bit PCM.
