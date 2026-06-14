@@ -111,6 +111,7 @@ async function main() {
 
   async function stopListening() {
     listening = false;
+    utteranceDone = false;
     pendingSegments.clear(); // discard any accumulated voice results
     setStatus(""); // clear the listening indicator while the mic is off
     await bridge.audioControl(false);
@@ -286,7 +287,30 @@ async function main() {
   // transcriptions for a single utterance are done.
   let nextSeq = 0;
   let pendingCount = 0;
+  let utteranceDone = false; // set by onUtteranceEnd; gates submission
   const pendingSegments = new Map<number, string>(); // seq → transcribed text
+
+  // Submit only when the segmenter has signalled end-of-utterance AND all
+  // in-flight transcriptions have completed. This prevents a race where the
+  // first segment's transcription finishes before the second segment is even
+  // queued, causing a single sentence to be sent as two separate messages.
+  function trySubmit() {
+    if (pendingCount > 0) return;
+    if (!utteranceDone) return;
+    utteranceDone = false;
+    if (pendingSegments.size > 0) {
+      const combined = [...pendingSegments.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([, t]) => t)
+        .join(" ");
+      pendingSegments.clear();
+      ask(combined);
+      return;
+    }
+    // Nothing to submit (silence / unintelligible audio) — resume listening
+    // unless the AI is already generating a response.
+    if (!generating) void startListening();
+  }
 
   const segmenter = new SpeechSegmenter({
     sampleRate: SAMPLE_RATE,
@@ -294,6 +318,15 @@ async function main() {
       const seq = nextSeq++;
       pendingCount++;
       void handleSegment(pcm, seq);
+    },
+    onUtteranceEnd: () => {
+      // Stop the mic immediately — the utterance is done, don't accept more words.
+      // Preserve pendingSegments and utteranceDone so in-flight transcriptions
+      // can still complete and submit the current sentence.
+      listening = false;
+      void bridge.audioControl(false);
+      utteranceDone = true;
+      trySubmit();
     },
   });
 
@@ -306,7 +339,9 @@ async function main() {
     setStatus("● transcribing");
     try {
       const text = await transcribe(pcm, SAMPLE_RATE, sttLanguage || undefined);
-      if (!listening) {
+      if (!listening && !utteranceDone) {
+        // Full stop (e.g. user started typing): discard. But if utteranceDone is
+        // true we only paused the mic — let this transcription complete and submit.
         pendingCount--;
         if (pendingCount === 0) pendingSegments.clear();
         return;
@@ -317,20 +352,7 @@ async function main() {
     }
 
     pendingCount--;
-    if (pendingCount > 0) return; // more segments still in flight — wait
-    // All segments done: submit combined text in utterance order.
-    if (pendingSegments.size > 0) {
-      const combined = [...pendingSegments.entries()]
-        .sort(([a], [b]) => a - b)
-        .map(([, t]) => t)
-        .join(" ");
-      pendingSegments.clear();
-      ask(combined);
-      return;
-    }
-    if (listening) {
-      setStatus("● listening");
-    }
+    trySubmit();
   }
 
   // Ask the host to show its exit confirmation layer (mode 1). The user decides whether
